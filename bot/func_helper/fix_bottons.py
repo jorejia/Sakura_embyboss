@@ -19,7 +19,7 @@ def judge_start_ikb(uid: int) -> InlineKeyboardMarkup:
     :param uid:
     :return:
     """
-    d = [['️👥 用户功能', 'members'], ['🌐 服务器', 'server'], ['🎟️ 使用注册码', 'exchange']]
+    d = [['️👥 用户功能', 'members'], ['🌐 服务器', 'server'], ['🎟️ 使用邀请/续费码', 'exchange']]
     if _open.checkin:
         d.append([f'🎯 签到', 'checkin'])
     if user_buy.stat:
@@ -34,8 +34,8 @@ def judge_start_ikb(uid: int) -> InlineKeyboardMarkup:
 # un_group_answer
 group_f = ikb([[('点击我(●ˇ∀ˇ●)', f't.me/{bot_name}', 'url')]])
 # un in group
-judge_group_ikb = ikb([[('🌟 频道入口 ', f't.me/{chanel}', 'url'),
-                        ('💫 群组入口', f't.me/{main_group}', 'url')],
+judge_group_ikb = ikb([[('🌟 上新通知频道', f't.me/{chanel}', 'url'),
+                        ('💫 MICU Media 股东会', f't.me/{main_group}', 'url')],
                        [('❌ 关闭消息', 'closeit')]])
 
 """members ↓"""
@@ -69,8 +69,7 @@ re_exchange_b_ikb = ikb([[('♻️ 重试', 'exchange'), ('❌ 关闭', 'closeit
 
 
 def store_ikb():
-    return ikb([[(f'♾️ 兑换白名单', 'store-whitelist')],
-                [(f'🎟️ 兑换注册码', 'store-invite'), (f'🔍 查询注册码', 'store-query')], [(f'❌ 取消', 'members')]])
+    return ikb([[(f'🎟️ 兑换邀请码', 'store-invite'), (f'🔍 我的邀请码', 'store-query')], [(f'❌ 取消', 'members')]])
 
 
 re_store_renew = ikb([[('✨ 重新输入', 'changetg'), ('💫 取消输入', 'storeall')]])

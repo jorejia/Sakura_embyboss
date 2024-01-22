@@ -528,9 +528,9 @@ async def user_emby_unblock(_, call):
 
 @bot.on_callback_query(filters.regex('exchange') & user_in_group_on_filter)
 async def call_exchange(_, call):
-    await asyncio.gather(callAnswer(call, '🔋 使用注册码'), deleteMessage(call))
-    msg = await ask_return(call, text='🔋 **【使用注册码】**：\n\n'
-                                      f'- 请在120s内对我发送你的注册码，形如\n`{ranks.logo}-xx-xxxx`\n退出点 /cancel',
+    await asyncio.gather(callAnswer(call, '🔋 使用邀请/续费码'), deleteMessage(call))
+    msg = await ask_return(call, text='🔋 **【使用邀请/续费码】**：\n\n'
+                                      f'- 请在120s内对我发送你的邀请/续费码，形如\n`{ranks.logo}-xx-xxxx`\n退出点 /cancel',
                            button=re_exchange_b_ikb)
     if msg is False:
         return
@@ -543,7 +543,7 @@ async def call_exchange(_, call):
 @bot.on_callback_query(filters.regex('storeall') & user_in_group_on_filter)
 async def do_store(_, call):
     if user_buy.stat:
-        return await callAnswer(call, '🌏 Sorry，此功能仅服务于公益服，其他请点击 【使用注册码】 续期', True)
+        return await callAnswer(call, '🌏 Sorry，此功能仅服务于公益服，其他请点击 【使用邀请/续费码】 续期', True)
     await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
                          editMessage(call, f'**🏪 请选择想要使用的服务：**\n⚖️ 自动{sakura_b}续期：{_open.exchange}',
                                      buttons=store_ikb()))

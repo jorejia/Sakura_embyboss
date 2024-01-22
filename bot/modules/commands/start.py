@@ -48,7 +48,7 @@ async def p_start(_, msg):
     if not await user_in_group_filter(_, msg):
         return await asyncio.gather(deleteMessage(msg),
                                     sendMessage(msg,
-                                                '💢 拜托啦！请先点击下面加入我们的群组和频道，然后再 /start 一下好吗？',
+                                                '💢 必须加入我们的群组和频道，然后再 /start 滴~',
                                                 buttons=judge_group_ikb))
     try:
         u = msg.command[1].split('-')[0]
@@ -76,7 +76,7 @@ async def b_start(_, call):
                                              call.from_user.id)))
     elif not await user_in_group_filter(_, call):
         await asyncio.gather(callAnswer(call, "⭐ 返回start"),
-                             editMessage(call, text='💢 拜托啦！请先点击下面加入我们的群组和频道，然后再 /start 一下好吗？',
+                             editMessage(call, text='💢 必须加入我们的群组和频道，然后再 /start 滴~',
                                          buttons=judge_group_ikb))
 
 

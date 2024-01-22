@@ -43,7 +43,7 @@ async def day_ranks(pin_mode=True):
             user_id, item_id, item_type, name, count, duarion = tuple(tv)
             tmp += str(i + 1) + "." + name + " - " + str(count) + "\n"
         payload += tmp
-    payload = f"**【{ranks.logo} 播放日榜】**\n\n" + payload + "\n#DayRanks" + "  " + date.today().strftime('%Y-%m-%d')
+    payload = f"**【MICU Cloud Media 播放日榜】**\n[点击查看用户手册](https://micu.hk/archives/emby-users) 密码：a1234\n-------------------------------\n" + payload + "\n#DayRanks" + "  " + date.today().strftime('%Y-%m-%d')
     message_info = await bot.send_photo(chat_id=group[0], photo=open(path, "rb"), caption=payload,
                                         parse_mode=enums.ParseMode.MARKDOWN)
     if pin_mode:
