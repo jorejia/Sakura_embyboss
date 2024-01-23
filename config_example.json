@@ -57,7 +57,8 @@
   ],
   "ranks": {
     "logo": "SAKURA",
-    "backdrop": false
+    "backdrop": false,
+    "announce": "公告，在日榜置顶处"
   },
   "schedall": {
     "dayrank": true,
