@@ -83,9 +83,8 @@ async def create_user(_, call, us, stats):
                                   f'· 用户密码 | `{pwd1[0]}`\n'
                                   f'· 安全密码 | `{emby_pwd2}`（仅发送一次）\n'
                                   f'· 到期时间 | `{pwd1[1]}`\n'
-                                  f'· 当前线路：\n'
-                                  f'{emby_line}\n\n'
-                                  f'**·【服务器】 - 查看线路和密码**')
+                                  f'· 服务器：{emby_line}\n\n'
+                                  f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**')
                 if stats == 'y':
                     LOGGER.info(f"【创建账户】[开注状态]：{call.from_user.id} - 建立了 {emby_name} ")
                 elif stats == 'n':
