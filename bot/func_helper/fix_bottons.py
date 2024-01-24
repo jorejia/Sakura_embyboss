@@ -50,7 +50,7 @@ def members_ikb(emby=False) -> InlineKeyboardMarkup:
     if emby:
         method = 'storeall' if not user_buy.stat else 'exchange'
         return ikb([[('🏪 兑换商店', method), ('🗑️ 删除账号', 'delme')],
-                    [('🎬 显示/隐藏', 'embyblock'), ('⭕ 重置密码', 'reset')],
+                    [('🎬 豆瓣点播', '@micu_sub_bot'), ('⭕ 重置密码', 'reset')],
                     [('♻️ 主界面', 'back_start')]])
     else:
         return ikb(
