@@ -49,8 +49,9 @@ def members_ikb(emby=False) -> InlineKeyboardMarkup:
     """
     if emby:
         method = 'storeall' if not user_buy.stat else 'exchange'
+        url = 'https://t.me/micu_sub_bot'
         return ikb([[('🏪 兑换商店', method), ('🗑️ 删除账号', 'delme')],
-                    [('🎬 豆瓣点播', url='https://t.me/micu_sub_bot'), ('⭕ 重置密码', 'reset')],
+                    [('🎬 豆瓣点播', url), ('⭕ 重置密码', 'reset')],
                     [('♻️ 主界面', 'back_start')]])
     else:
         return ikb(
