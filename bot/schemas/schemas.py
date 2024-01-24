@@ -62,6 +62,7 @@ class Open(BaseModel):
 class Ranks(BaseModel):
     logo: str = "SAKURA"
     backdrop: bool = False
+    announce: str = "公告，在日榜置顶处"
 
 
 class Schedall(BaseModel):
