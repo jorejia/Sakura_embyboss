@@ -21,7 +21,7 @@ async def user_in_checkin(_, call):
             reward = random.randint(1, 10)
             s = e.iv + reward
             sql_update_emby(Emby.tg == call.from_user.id, iv=s, ch=now)
-            text = f'🎉 **签到成功** | {reward} {sakura_b}\n💴 **当前状态** | {s} {sakura_b}\n⏳ **签到日期** | {now.strftime("%Y-%m-%d")}'
+            text = f'🎉 **签到成功** | + {reward} {sakura_b}\n💴 **当前余额** | {s} {sakura_b}\n⏳ **签到日期** | {now.strftime("%Y-%m-%d")}'
             await asyncio.gather(call.message.delete(), sendMessage(call, text=text))
 
         else:
