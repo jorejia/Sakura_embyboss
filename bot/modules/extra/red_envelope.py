@@ -45,51 +45,51 @@ async def create_reds(money, members, first_name, flag=None, private=None):
 
 @bot.on_message(filters.command('red', prefixes) & user_in_group_on_filter & filters.group)
 async def send_red_envelop(_, msg):
-    if msg.reply_to_message:
-        try:
-            money = int(msg.command[1])
-        except (IndexError, KeyError, ValueError):
-            return await asyncio.gather(msg.delete(),
-                                        sendMessage(msg, f'**🧧 专享红包：\n\n使用请回复一位群友 + {sakura_b}', timer=60))
-        if not msg.sender_chat:
-            e = sql_get_emby(tg=msg.from_user.id)
-            if not e or e.iv < 5 or money < 5 or msg.reply_to_message.from_user.id == msg.from_user.id:
-                await asyncio.gather(msg.delete(),
-                                     msg.chat.restrict_member(msg.from_user.id, ChatPermissions(),
-                                                              datetime.now() + timedelta(minutes=1)),
-                                     sendMessage(msg, f'[{msg.from_user.first_name}](tg://user?id={msg.from_user.id}) '
-                                                      f'违反规则，禁言一分钟。\nⅰ 所持有{sakura_b}不小于5\nⅱ 发出{sakura_b}不小于5\nⅲ 不许发自己',
-                                                 timer=60))
-                return
-            else:
-                new_iv = e.iv - money
-                sql_update_emby(Emby.tg == msg.from_user.id, iv=new_iv)
-                if not msg.reply_to_message.from_user.photo:
-                    user_pic = None
-                else:
-                    user_pic = await bot.download_media(msg.reply_to_message.from_user.photo.big_file_id,
-                                                        in_memory=True)
-                first_name = msg.from_user.first_name
+    # if msg.reply_to_message:
+    #     try:
+    #         money = int(msg.command[1])
+    #     except (IndexError, KeyError, ValueError):
+    #         return await asyncio.gather(msg.delete(),
+    #                                     sendMessage(msg, f'**🧧 专享红包：\n\n使用请回复一位群友 + {sakura_b}', timer=60))
+    #     if not msg.sender_chat:
+    #         e = sql_get_emby(tg=msg.from_user.id)
+    #         if not e or e.iv < 5 or money < 5 or msg.reply_to_message.from_user.id == msg.from_user.id:
+    #             await asyncio.gather(msg.delete(),
+    #                                  msg.chat.restrict_member(msg.from_user.id, ChatPermissions(),
+    #                                                           datetime.now() + timedelta(minutes=1)),
+    #                                  sendMessage(msg, f'[{msg.from_user.first_name}](tg://user?id={msg.from_user.id}) '
+    #                                                   f'违反规则，禁言一分钟。\nⅰ 所持有{sakura_b}不小于5\nⅱ 发出{sakura_b}不小于5\nⅲ 不许发自己',
+    #                                              timer=60))
+    #             return
+    #         else:
+    #             new_iv = e.iv - money
+    #             sql_update_emby(Emby.tg == msg.from_user.id, iv=new_iv)
+    #             if not msg.reply_to_message.from_user.photo:
+    #                 user_pic = None
+    #             else:
+    #                 user_pic = await bot.download_media(msg.reply_to_message.from_user.photo.big_file_id,
+    #                                                     in_memory=True)
+    #             first_name = msg.from_user.first_name
 
-        elif msg.sender_chat.id == msg.chat.id:
-            if not msg.reply_to_message.from_user.photo:
-                user_pic = None
-            else:
-                user_pic = await bot.download_media(message=msg.reply_to_message.from_user.photo.big_file_id,
-                                                    in_memory=True)
-            first_name = msg.chat.title
-        else:
-            return
-        reply, delete = await asyncio.gather(msg.reply('正在准备专享红包，稍等'), msg.delete())
-        ikb = create_reds(money=money, first_name=first_name, members=1, private=msg.reply_to_message.from_user.id)
-        cover = RanksDraw.hb_test_draw(money, 1, user_pic, f'{msg.reply_to_message.from_user.first_name} 专享')
-        ikb, cover = await asyncio.gather(ikb, cover)
-        await asyncio.gather(sendPhoto(msg, photo=cover, buttons=ikb), reply.delete(),
-                             sendMessage(msg, f'🔥 [{msg.reply_to_message.from_user.first_name}]'
-                                              f'(tg://user?id={msg.reply_to_message.from_user.id})\n'
-                                              f' 您收到一个来自 [{first_name}](tg://user?id={msg.from_user.id}) 的专属红包'))
+    #     elif msg.sender_chat.id == msg.chat.id:
+    #         if not msg.reply_to_message.from_user.photo:
+    #             user_pic = None
+    #         else:
+    #             user_pic = await bot.download_media(message=msg.reply_to_message.from_user.photo.big_file_id,
+    #                                                 in_memory=True)
+    #         first_name = msg.chat.title
+    #     else:
+    #         return
+    #     reply, delete = await asyncio.gather(msg.reply('正在准备专享红包，稍等'), msg.delete())
+    #     ikb = create_reds(money=money, first_name=first_name, members=1, private=msg.reply_to_message.from_user.id)
+    #     cover = RanksDraw.hb_test_draw(money, 1, user_pic, f'{msg.reply_to_message.from_user.first_name} 专享')
+    #     ikb, cover = await asyncio.gather(ikb, cover)
+    #     await asyncio.gather(sendPhoto(msg, photo=cover, buttons=ikb), reply.delete(),
+    #                          sendMessage(msg, f'🔥 [{msg.reply_to_message.from_user.first_name}]'
+    #                                           f'(tg://user?id={msg.reply_to_message.from_user.id})\n'
+    #                                           f' 您收到一个来自 [{first_name}](tg://user?id={msg.from_user.id}) 的专属红包'))
 
-    elif not msg.reply_to_message:
+      if not msg.reply_to_message:
         try:
             money = int(msg.command[1])
             members = int(msg.command[2])
@@ -98,7 +98,7 @@ async def send_red_envelop(_, msg):
                                         sendMessage(msg,
                                                     f'**🧧 发红包：\n\n'
                                                     f'/red [总{sakura_b}数] [份数] [mode]**\n\n'
-                                                    f'[mode]留空为 拼手气, 任意值为 均分\n专享红包请回复 + {sakura_b}',
+                                                    f'[mode]留空为 拼手气, 任意值为 均分',
                                                     timer=60))
         if not msg.sender_chat:
             e = sql_get_emby(tg=msg.from_user.id)
