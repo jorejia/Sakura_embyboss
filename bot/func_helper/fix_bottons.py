@@ -19,7 +19,7 @@ def judge_start_ikb(uid: int) -> InlineKeyboardMarkup:
     :param uid:
     :return:
     """
-    d = [['️👥 用户功能', 'members'], ['🌐 服务器', 'server'], ['🎟️ 使用邀请/续费码', 'exchange']]
+    d = [['️👥 用户功能', 'members'], ['🌐 服务器', 'server'], ['🎟️ 使用注册码', 'exchange']]
     if _open.checkin:
         d.append([f'🎯 签到', 'checkin'])
     if user_buy.stat:
@@ -48,8 +48,8 @@ def members_ikb(emby=False) -> InlineKeyboardMarkup:
     :return:
     """
     if emby:
-        method = 'storeall' if not user_buy.stat else 'exchange'
-        return ikb([[('🏪 兑换商店', method), ('🗑️ 删除账号', 'delme')],
+        # method = 'storeall' if not user_buy.stat else 'exchange'
+        return ikb([[('🏪 兑换商店', 'storeall'), ('🗑️ 删除账号', 'delme')],
                     [('🎬 豆瓣点播', 'https://t.me/micu_sub_bot', 'url'), ('⭕ 重置密码', 'reset')],
                     [('♻️ 主界面', 'back_start')]])
     else:
@@ -69,7 +69,7 @@ re_exchange_b_ikb = ikb([[('♻️ 重试', 'exchange'), ('❌ 关闭', 'closeit
 
 
 def store_ikb():
-    return ikb([[(f'🎟️ 兑换邀请码', 'store-invite'), (f'🔍 我的邀请码', 'store-query')], [(f'❌ 取消', 'members')]])
+    return ikb([[(f'🎟️ 兑换时长', 'store-renew'), (f'🔍 我的邀请码', 'store-query')], [(f'❌ 取消', 'members')]])
 
 
 re_store_renew = ikb([[('✨ 重新输入', 'changetg'), ('💫 取消输入', 'storeall')]])

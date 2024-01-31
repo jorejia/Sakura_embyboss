@@ -527,9 +527,9 @@ async def user_emby_unblock(_, call):
 
 @bot.on_callback_query(filters.regex('exchange') & user_in_group_on_filter)
 async def call_exchange(_, call):
-    await asyncio.gather(callAnswer(call, '🔋 使用邀请/续费码'), deleteMessage(call))
-    msg = await ask_return(call, text='🔋 **【使用邀请/续费码】**：\n\n'
-                                      f'- 请在120s内对我发送你的邀请/续费码，形如\n`{ranks.logo}-xx-xxxx`\n退出点 /cancel',
+    await asyncio.gather(callAnswer(call, '🔋 使用注册码'), deleteMessage(call))
+    msg = await ask_return(call, text='🔋 **【使用注册码】**：\n\n'
+                                      f'- 请在120s内对我发送你的注册码，形如\n`{ranks.logo}-xx-xxxx`\n退出点 /cancel',
                            button=re_exchange_b_ikb)
     if msg is False:
         return
@@ -542,50 +542,50 @@ async def call_exchange(_, call):
 @bot.on_callback_query(filters.regex('storeall') & user_in_group_on_filter)
 async def do_store(_, call):
     if user_buy.stat:
-        return await callAnswer(call, '🌏 Sorry，此功能仅服务于公益服，其他请点击 【使用邀请/续费码】 续期', True)
+        return await callAnswer(call, '🌏 Sorry，此功能仅服务于公益服，其他请点击 【使用注册码】 续期', True)
     await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
                          editMessage(call, f'**🏪 请选择想要使用的服务：**\n⚖️ 自动{sakura_b}续期：{_open.exchange}',
                                      buttons=store_ikb()))
 
 
-# @bot.on_callback_query(filters.regex('store-renew') & user_in_group_on_filter)
-# async def do_store_renew(_, call):
-#     if _open.exchange:
-#         await callAnswer(call, '✔️ 进入兑换时长')
-#         e = sql_get_emby(tg=call.from_user.id)
-#         if e is None:
-#             return
-#         if e.iv < _open.exchange_cost:
-#             return await editMessage(call,
-#                                      f'**🏪 兑换规则：**\n当前兑换为 {_open.exchange_cost}{sakura_b} / 一天，**兑换者所持有积分不得低于{_open.exchange_cost}**，当前仅：{e.iv}，请好好努力。',
-#                                      buttons=back_members_ikb)
-#
-#         await editMessage(call,
-#                           f'🏪 您已满足基础{sakura_b}要求，请回复您需要兑换的时长，当前兑换为 {_open.exchange_cost}{sakura_b} / 一天，退出请 /cancel')
-#         m = await callListen(call, 120, buttons=re_store_renew)
-#         if m is False:
-#             return
-#
-#         elif m.text == '/cancel':
-#             await asyncio.gather(m.delete(), do_store(_, call))
-#         else:
-#             try:
-#                 await m.delete()
-#                 iv = int(m.text)
-#             except KeyError:
-#                 await editMessage(call, f'❌ 请不要调戏bot，输入一个整数！！！', buttons=re_store_renew)
-#             else:
-#                 new_us = e.iv - iv
-#                 if new_us < 0:
-#                     sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - 10)
-#                     return await editMessage(call, f'🫡，西内！输入值超出你持有的{e.iv}{sakura_b}，倒扣10。')
-#                 new_ex = e.ex + timedelta(days=iv / _open.exchange_cost)
-#                 sql_update_emby(Emby.tg == call.from_user.id, ex=new_ex, iv=new_us)
-#                 await asyncio.gather(emby.emby_change_policy(id=e.embyid),
-#                                      editMessage(call, f'🎉 您已花费 {iv}{sakura_b}\n🌏 到期时间 **{new_ex}**'))
-#                 LOGGER.info(f'【兑换续期】- {call.from_user.id} 已花费 {iv}{sakura_b}，到期时间：{new_ex}')
-#     else:
-#         await callAnswer(call, '❌ 管理员未开启此兑换', True)
+@bot.on_callback_query(filters.regex('store-renew') & user_in_group_on_filter)
+async def do_store_renew(_, call):
+    if _open.exchange:
+        await callAnswer(call, '✔️ 进入兑换时长')
+        e = sql_get_emby(tg=call.from_user.id)
+        if e is None:
+            return
+        if e.iv < _open.exchange_cost:
+            return await editMessage(call,
+                                     f'**🏪 兑换规则：**\n当前兑换为 {_open.exchange_cost}{sakura_b} / 一天，**兑换者所持有积分不得低于{_open.exchange_cost}**，当前仅：{e.iv}，请好好努力。',
+                                     buttons=back_members_ikb)
+
+        await editMessage(call,
+                          f'🏪 您已满足基础{sakura_b}要求，请回复您需要兑换的时长，当前兑换为 {_open.exchange_cost}{sakura_b} / 一天，退出请 /cancel')
+        m = await callListen(call, 120, buttons=re_store_renew)
+        if m is False:
+            return
+
+        elif m.text == '/cancel':
+            await asyncio.gather(m.delete(), do_store(_, call))
+        else:
+            try:
+                await m.delete()
+                iv = int(m.text)
+            except KeyError:
+                await editMessage(call, f'❌ 请不要调戏bot，输入一个整数！！！', buttons=re_store_renew)
+            else:
+                new_us = e.iv - iv
+                if new_us < 0:
+                    sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - 5)
+                    return await editMessage(call, f'🫡，西内！输入值超出你持有的{e.iv}{sakura_b}，倒扣5。')
+                new_ex = e.ex + timedelta(days=iv / _open.exchange_cost)
+                sql_update_emby(Emby.tg == call.from_user.id, ex=new_ex, iv=new_us)
+                await asyncio.gather(emby.emby_change_policy(id=e.embyid),
+                                     editMessage(call, f'🎉 您已花费 {iv}{sakura_b}\n🌏 到期时间 **{new_ex}**'))
+                LOGGER.info(f'【兑换续期】- {call.from_user.id} 已花费 {iv}{sakura_b}，到期时间：{new_ex}')
+    else:
+        await callAnswer(call, '❌ 管理员未开启此兑换', True)
 
 
 @bot.on_callback_query(filters.regex('store-whitelist') & user_in_group_on_filter)
