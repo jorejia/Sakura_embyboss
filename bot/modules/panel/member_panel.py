@@ -9,7 +9,7 @@ import asyncio
 import datetime
 import math
 import random
-
+from datetime import timedelta, datetime
 
 from pyrogram.errors import BadRequest
 from bot.schemas import ExDate, Yulv
