@@ -9,7 +9,7 @@ import asyncio
 import datetime
 import math
 import random
-from datetime import timedelta, datetime
+
 
 from pyrogram.errors import BadRequest
 from bot.schemas import ExDate, Yulv
@@ -21,7 +21,7 @@ from bot.func_helper.filters import user_in_group_on_filter
 from bot.func_helper.utils import members_info, tem_alluser, cr_link_one
 from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create_ikb, del_me_ikb, re_delme_ikb, \
     re_reset_ikb, re_changetg_ikb, emby_block_ikb, user_emby_block_ikb, user_emby_unblock_ikb, re_exchange_b_ikb, \
-    store_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, user_query_page
+    store_ikb, store_vip_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, user_query_page
 from bot.func_helper.msg_utils import callAnswer, editMessage, callListen, sendMessage, ask_return, deleteMessage
 from bot.modules.commands import p_start
 from bot.modules.commands.exchange import rgs_code
@@ -541,9 +541,13 @@ async def call_exchange(_, call):
 
 @bot.on_callback_query(filters.regex('storeall') & user_in_group_on_filter)
 async def do_store(_, call):
-    if user_buy.stat:
-        return await callAnswer(call, '🌏 Sorry，此功能仅服务于公益服，其他请点击 【使用注册码】 续期', True)
-    await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
+    e = sql_get_emby(tg=call.from_user.id)
+    if (datetime.now() - e.ex).days > 90:
+        await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
+                         editMessage(call, f'**🏪 请选择想要使用的服务：**\n⚖️ 自动{sakura_b}续期：{_open.exchange}',
+                                     buttons=store_vip_ikb()))
+    else:
+        await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
                          editMessage(call, f'**🏪 请选择想要使用的服务：**\n⚖️ 自动{sakura_b}续期：{_open.exchange}',
                                      buttons=store_ikb()))
 
@@ -557,7 +561,7 @@ async def do_store_renew(_, call):
             return
         if e.iv < _open.exchange_cost:
             return await editMessage(call,
-                                     f'**🏪 兑换规则：**\n当前兑换为 {_open.exchange_cost}{sakura_b} / 一天，**兑换者所持有积分不得低于{_open.exchange_cost}**，当前仅：{e.iv}，请好好努力。',
+                                     f'**🏪 兑换规则：**\n当前兑换为 {_open.exchange_cost} {sakura_b} / 1 天，**兑换者所持有积分不得低于{_open.exchange_cost}**，当前仅：{e.iv}，请好好努力。',
                                      buttons=back_members_ikb)
 
         await editMessage(call,
@@ -579,8 +583,8 @@ async def do_store_renew(_, call):
                 new_us = e.iv - iv
                 if new_us < 0:
                     sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - 5)
-                    return await editMessage(call, f'🫡，西内！输入值超出你持有的{e.iv}{sakura_b}，倒扣5。')
-                new_ex = e.ex + timedelta(days=iv / _open.exchange_cost)
+                    return await editMessage(call, f'🫡，西内！兑换时间超出你持有的{e.iv}{sakura_b}，倒扣5。')
+                new_ex = e.ex + timedelta(days)
                 sql_update_emby(Emby.tg == call.from_user.id, ex=new_ex, iv=new_us)
                 await asyncio.gather(emby.emby_change_policy(id=e.embyid),
                                      editMessage(call, f'🎉 您已花费 {iv}{sakura_b}\n🌏 到期时间 **{new_ex}**'))
