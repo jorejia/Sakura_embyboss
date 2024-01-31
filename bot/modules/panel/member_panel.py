@@ -562,11 +562,11 @@ async def do_store_renew(_, call):
             return
         if e.iv < _open.exchange_cost:
             return await editMessage(call,
-                                     f'**🏪 兑换规则：**\n当前兑换为 {_open.exchange_cost} {sakura_b} / 1 天，**兑换者所持有积分不得低于{_open.exchange_cost}**，当前仅：{e.iv}，请好好努力。',
+                                     f'**🏪 兑换规则：**\n当前兑换为 {_open.exchange_cost} {sakura_b} / 1 天，**持有积分不得低于{_open.exchange_cost}**，当前仅：{e.iv}，请好好努力。',
                                      buttons=back_members_ikb)
 
         await editMessage(call,
-                          f'🏪 您已满足基础{sakura_b}要求，请回复您需要兑换的天数，当前兑换为 {_open.exchange_cost} {sakura_b} / 1 天，退出请 /cancel')
+                          f'🏪 请输入您需要兑换的天数，当前兑换为 {_open.exchange_cost} {sakura_b} / 1 天，退出请 /cancel')
         m = await callListen(call, 120, buttons=re_store_renew)
         if m is False:
             return
