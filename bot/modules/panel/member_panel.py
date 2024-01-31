@@ -543,7 +543,7 @@ async def call_exchange(_, call):
 async def do_store(_, call):
     e = sql_get_emby(tg=call.from_user.id)
     ch_day=e.ex - datetime.now()
-    if ch_day.days > 90:
+    if ch_day.days > 90 or e.lv == 'a':
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
                          editMessage(call, f'**🏪 请选择想要使用的服务：**\n⚖️ 自动{sakura_b}续期：{_open.exchange}',
                                      buttons=store_vip_ikb()))
