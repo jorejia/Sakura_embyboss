@@ -561,7 +561,7 @@ async def do_store_renew(_, call):
                                      buttons=back_members_ikb)
 
         await editMessage(call,
-                          f'🏪 您已满足基础{sakura_b}要求，请回复您需要兑换的时长，当前兑换为 {_open.exchange_cost}{sakura_b} / 一天，退出请 /cancel')
+                          f'🏪 您已满足基础{sakura_b}要求，请回复您需要兑换的天数，当前兑换为 {_open.exchange_cost} {sakura_b} / 1 天，退出请 /cancel')
         m = await callListen(call, 120, buttons=re_store_renew)
         if m is False:
             return
@@ -571,7 +571,8 @@ async def do_store_renew(_, call):
         else:
             try:
                 await m.delete()
-                iv = int(m.text)
+                days = int(m.text)
+                iv = days * _open.exchange_cost
             except KeyError:
                 await editMessage(call, f'❌ 请不要调戏bot，输入一个整数！！！', buttons=re_store_renew)
             else:
