@@ -72,7 +72,7 @@ def store_ikb():
     return ikb([[(f'🕐 兑换时长', 'store-renew'), (f'🔍 我的邀请码', 'store-query')], [(f'❌ 取消', 'members')]])
 
 def store_vip_ikb():
-    return ikb([[(f'🕐 兑换时长', 'store-renew'), (f'🎟️ 兑换邀请码', 'store-renew'), (f'🔍 我的邀请码', 'store-query')], [(f'❌ 取消', 'members')]])
+    return ikb([[(f'🕐 兑换时长', 'store-renew'), (f'🎟️ 兑换邀请码', 'store-invite'), (f'🔍 我的邀请码', 'store-query')], [(f'❌ 取消', 'members')]])
 
 re_store_renew = ikb([[('✨ 重新输入', 'changetg'), ('💫 取消输入', 'storeall')]])
 
