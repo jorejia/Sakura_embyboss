@@ -21,10 +21,11 @@ async def rgs_code(_, msg, register_code):
     ex = data.ex
     lv = data.lv
     us = data.us
-    if embyid or us > 0:
-        if not _open.allow_code: return await sendMessage(msg,
-                                                          "🔔 **已有账号/注册码**\n无法使用，不要贪心哦~",
-                                                          timer=60)
+    if embyid == None and us > 0:
+        return await sendMessage(msg, "🔔 **已有注册码**\n快去注册吧，不可以贪心的哦~", timer=60)
+    elif embyid:
+        if not _open.allow_code:
+            return await sendMessage(msg, "🔔 **已有账号**\n当前未开放注册码续费~", timer=60)
         with Session() as session:
             # with_for_update 是一个排他锁，其实就不需要悲观锁或者是乐观锁，先锁定先到的数据使其他session无法读取，修改(单独似乎不起作用，也许是不能完全防止并发冲突，于是加入原子操作)
             r = session.query(Code).filter(Code.code == register_code).with_for_update().first()
