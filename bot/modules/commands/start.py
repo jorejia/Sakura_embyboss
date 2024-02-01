@@ -48,7 +48,7 @@ async def p_start(_, msg):
     if not await user_in_group_filter(_, msg):
         return await asyncio.gather(deleteMessage(msg),
                                     sendMessage(msg,
-                                                '💢 必须加入我们的群组和频道，然后再 /start 滴~',
+                                                '💢 使用bot请加入我们的群组和频道，然后再回来点 /start 哦~',
                                                 buttons=judge_group_ikb))
     try:
         u = msg.command[1].split('-')[0]

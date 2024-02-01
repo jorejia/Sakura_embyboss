@@ -16,13 +16,13 @@ async def rgs_code(_, msg, register_code):
     if _open.stat: return await sendMessage(msg, "🤧 自由注册开启下无法使用注册码。")
 
     data = sql_get_emby(tg=msg.from_user.id)
-    if not data: return await sendMessage(msg, "出错了，不确定您是否有资格使用，请先 /start")
+    if not data: return await sendMessage(msg, "请先点击 /start ，否则无法使用注册码")
     embyid = data.embyid
     ex = data.ex
     lv = data.lv
-    if embyid:
+    if embyid or ex > datetime.now():
         if not _open.allow_code: return await sendMessage(msg,
-                                                          "🔔 很遗憾，管理员已经将注册码续期关闭\n**已有账户成员**无法使用register_code，请悉知",
+                                                          "🔔 **已有账号/注册码**\n无法使用，不要贪心哦~",
                                                           timer=60)
         with Session() as session:
             # with_for_update 是一个排他锁，其实就不需要悲观锁或者是乐观锁，先锁定先到的数据使其他session无法读取，修改(单独似乎不起作用，也许是不能完全防止并发冲突，于是加入原子操作)
