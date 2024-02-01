@@ -20,7 +20,8 @@ async def rgs_code(_, msg, register_code):
     embyid = data.embyid
     ex = data.ex
     lv = data.lv
-    if ex and (embyid or ex > datetime.now()):
+    us = data.us
+    if embyid or us > 0:
         if not _open.allow_code: return await sendMessage(msg,
                                                           "🔔 **已有账号/注册码**\n无法使用，不要贪心哦~",
                                                           timer=60)
