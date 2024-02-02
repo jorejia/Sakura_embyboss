@@ -28,7 +28,7 @@ from bot.modules.commands.exchange import rgs_code
 from bot.sql_helper.sql_code import sql_count_c_code
 from bot.sql_helper.sql_emby import sql_get_emby, sql_update_emby, Emby, sql_delete_emby
 from bot.sql_helper.sql_emby2 import sql_get_emby2, sql_delete_emby2
-
+from bot.sql_helper import Session
 
 # 创号函数
 async def create_user(_, call, us, stats):
@@ -132,12 +132,12 @@ async def create(_, call):
             else:
                 await create_user(_, call, us=e.us, stats='n')
         else:
-            if e.invite and e.invite == 'y':
+            if e.invite == 'y':
                 send = await callAnswer(call, f'🪙 欢迎注册 MICU Cloud Media，请稍后。', True)
                 if send is False:
                     return
                 else:
-                    sql_update_emby(Emby.invite == 'n')
+                    sql_update_emby(Emby.tg == call, invite == 'n')
                     await create_user(_, call, us=e.us, stats='n')
             else:
                 send = await callAnswer(call, f'🤖 当前服务器人数已达上限，无法注册，请耐心等待。', True)
