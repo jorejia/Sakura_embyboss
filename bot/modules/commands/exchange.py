@@ -21,7 +21,6 @@ async def rgs_code(_, msg, register_code):
     ex = data.ex
     lv = data.lv
     us = data.us
-    invite = data.invite
     if embyid is None and us > 0 and not _open.allow_code:
         return await sendMessage(msg, "🔔 **已有注册码**\n无法重复使用，快去创建账号吧，不可以贪心的哦~", timer=60)
     elif embyid:
@@ -71,7 +70,7 @@ async def rgs_code(_, msg, register_code):
             # 我勒个豆，终于用 原子操作 + 排他锁 成功防止了并发更新
             # 在 UPDATE 语句中添加一个条件，只有当注册码未被使用时，才更新数据。这样，如果有两个用户同时尝试使用同一条注册码，只有一个用户的 UPDATE 语句会成功，因为另一个用户的 UPDATE 语句会发现注册码已经被使用。
             r = session.query(Code).filter(Code.code == register_code).with_for_update().first()
-            if not r: return await sendMessage(msg, "⛔ **你输入了一个错误de注册码，请确认好重试。**")
+            if not r: return await sendMessage(msg, "⛔ **你输入了一个错误de注册码，请确认好重试。**", timer=60)
             re = session.query(Code).filter(Code.code == register_code, Code.used.is_(None)).with_for_update().update(
                 {Code.used: msg.from_user.id, Code.usedtime: datetime.now()})
             session.commit()  # 必要的提交。否则失效
