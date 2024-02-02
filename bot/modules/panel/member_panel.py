@@ -626,8 +626,8 @@ async def do_store_invite(_, call):
                                     True)
         await editMessage(call,
                           f'🎟️ 请回复创建 **[模式]**：\n\n'
-                          f'· `link` - 邀请链接\n'
-                          f'· `code` - 邀请码\n'
+                          f'  `link` - 邀请链接\n'
+                          f'  `code` - 邀请码\n\n'
                           f'__取消本次操作，请 /cancel__')
         content = await callListen(call, 120)
         if content is False:
