@@ -143,7 +143,7 @@ async def cr_link_invite(tg: int, times, count, days: int, method: str):
     elif method == 'link':
         while i <= count:
             p = await pwd_create(10)
-            uid = f'{ranks.logo}-{times}-{p}'
+            uid = f'{ranks.logo}-{times}-invite-{p}'
             code_list.append(uid)
             link = f't.me/{bot_name}?start={uid}\n'
             links += link
