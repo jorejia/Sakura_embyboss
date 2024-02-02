@@ -123,13 +123,25 @@ async def create(_, call):
     if e.embyid:
         await callAnswer(call, '💦 你已经有账户啦！请勿重复注册。', True)
     elif not _open.stat and int(e.us) <= 0:
-        await callAnswer(call, f'🤖 自助注册已关闭，等待开启。', True)
+        await callAnswer(call, f'🤖 当前没有可注册时长。', True)
     elif not _open.stat and int(e.us) > 0:
-        send = await callAnswer(call, f'🪙 积分满足要求，请稍后。', True)
-        if send is False:
-            return
+        if _open.tem <= _open.all_user:
+            send = await callAnswer(call, f'🪙 欢迎注册 MICU Cloud Media，请稍后。', True)
+            if send is False:
+                return
+            else:
+                await create_user(_, call, us=e.us, stats='n')
         else:
-            await create_user(_, call, us=e.us, stats='n')
+            if e.invite and e.invite == 'y':
+                send = await callAnswer(call, f'🪙 欢迎注册 MICU Cloud Media，请稍后。', True)
+                if send is False:
+                    return
+                else:
+                    await create_user(_, call, us=e.us, stats='n')
+            else:
+                send = await callAnswer(call, f'🤖 当前服务器人数已达上限，无法注册，请耐心等待。', True)
+
+
     elif _open.stat:
         send = await callAnswer(call, f"🪙 开放注册，免除积分要求。", True)
         if send is False:

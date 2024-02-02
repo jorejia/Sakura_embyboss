@@ -107,8 +107,8 @@ class Embyservice:
         :param stats: plocy 策略
         :return: bool
         """
-        if _open.tem >= _open.all_user:
-            return 403
+        # if _open.tem >= _open.all_user:
+        #     return 403
         ex = (datetime.now() + timedelta(days=us))
         name_data = ({"Name": name})
         new_user = r.post(f'{self.url}/emby/Users/New',

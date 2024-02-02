@@ -21,7 +21,8 @@ async def rgs_code(_, msg, register_code):
     ex = data.ex
     lv = data.lv
     us = data.us
-    if embyid == None and us > 0:
+    invite = data.invite
+    if embyid == None and us > 0 and (invite == None or invite == 'n'):
         return await sendMessage(msg, "🔔 **已有注册码**\n快去创建账号吧，不可以贪心的哦~", timer=60)
     elif embyid:
         if not _open.allow_code:
@@ -76,12 +77,13 @@ async def rgs_code(_, msg, register_code):
             session.commit()  # 必要的提交。否则失效
             tg1 = r.tg
             us1 = r.us
+            in1 = r.invite
             used = r.used
             if re == 0: return await sendMessage(msg,
                                                  f'此 `{register_code}` \n注册码已被使用,是 [{used}](tg://user?id={used}) 的形状了喔')
             first = await bot.get_chat(tg1)
             x = data.us + us1
-            session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.us: x})
+            session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.us: x, Emby.invite: in1})
             session.commit()
             await sendPhoto(msg, photo=bot_photo,
                             caption=f'🎊 少年郎，恭喜你，已经收到了 [{first.first_name}](tg://user?id={tg1}) 发送的邀请注册资格\n\n请选择你的选项~',
