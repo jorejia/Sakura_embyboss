@@ -10,7 +10,7 @@ from bot.func_helper.filters import user_in_group_on_filter
 from bot.sql_helper.sql_emby import sql_get_emby
 from bot.func_helper.fix_bottons import cr_page_server
 from bot.func_helper.msg_utils import callAnswer, editMessage
-
+from bot.func_helper.utils import open_check
 
 @bot.on_callback_query(filters.regex('server') & user_in_group_on_filter)
 async def server(_, call):
@@ -34,13 +34,14 @@ async def server(_, call):
 
     pwd = '空' if not data.pwd else data.pwd
     line = f'{emby_line}' if data.lv in ['a', 'b'] else ' - **无权查看**'
+    all_user = await open_check()
     try:
         online = emby.get_current_playing_count()
     except:
         online = 'Emby服务器断连 ·0'
-    text = f'**▎↓目前线路 & 用户密码：**`{pwd}`\n' \
-           f'{line}\n\n' \
+    text = f'**▎当前服务器：{line}**\n' \
            f'{server_info}' \
+           f'· 🎫 总上限 | **{all_user}**\n· 🎟️ 已注册 | **{emby}**' \
            f'· 🎬 在线 | **{online}** 人\n\n' \
            f'**· 🌏 [{(datetime.now(timezone(timedelta(hours=8)))).strftime("%Y-%m-%d %H:%M:%S")}]**'
     await editMessage(call, text, buttons=keyboard)
