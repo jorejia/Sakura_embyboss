@@ -34,15 +34,15 @@ async def server(_, call):
 
     pwd = '空' if not data.pwd else data.pwd
     line = f'{emby_line}' if data.lv in ['a', 'b'] else ' - **无权查看**'
-    all_user = await open_check()
-    emby_user = sql_count_emby()
+    stat, all_user, tem, timing, allow_code = await open_check()
+    tg, emby_user, white = sql_count_emby()
     try:
         online = emby.get_current_playing_count()
     except:
         online = 'Emby服务器断连 ·0'
-    text = f'**▎当前服务器：{line}**\n' \
+    text = f'**▎当前服务器：{line}**\n\n' \
            f'{server_info}' \
-           f'· 🎫 总上限 | **{all_user}**\n· 🎟️ 已注册 | **{emby_user}**' \
+           f'· 🎫 总上限 | **{all_user}**\n· 🎟️ 已注册 | **{emby_user}**\n' \
            f'· 🎬 在线 | **{online}** 人\n\n' \
            f'**· 🌏 [{(datetime.now(timezone(timedelta(hours=8)))).strftime("%Y-%m-%d %H:%M:%S")}]**'
     await editMessage(call, text, buttons=keyboard)
