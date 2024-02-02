@@ -22,7 +22,7 @@ async def rgs_code(_, msg, register_code):
     lv = data.lv
     us = data.us
     invite = data.invite
-    if embyid is None and us > 0 and invite == 'n':
+    if embyid is None and us > 0 and not _open.allow_code:
         return await sendMessage(msg, "🔔 **已有注册码**\n无法重复使用，快去创建账号吧，不可以贪心的哦~", timer=60)
     elif embyid:
         if not _open.allow_code:
