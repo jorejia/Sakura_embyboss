@@ -137,7 +137,7 @@ async def create(_, call):
                 if send is False:
                     return
                 else:
-                    sql_update_emby(Emby.tg == call, invite == 'n')
+                    sql_update_emby(Emby.tg == call, invite = 'n')
                     await create_user(_, call, us=e.us, stats='n')
             else:
                 send = await callAnswer(call, f'🤖 当前服务器人数已达上限，无法注册，请耐心等待。', True)
