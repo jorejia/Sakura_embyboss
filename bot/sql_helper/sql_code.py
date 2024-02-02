@@ -15,6 +15,7 @@ class Code(Base):
     code = Column(String(50), primary_key=True, autoincrement=False)
     tg = Column(BigInteger)
     us = Column(Integer)
+    invite = Column(String(1), nullable=True)
     used = Column(BigInteger, nullable=True)
     usedtime = Column(DateTime, nullable=True)
 
