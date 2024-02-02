@@ -7,10 +7,10 @@ from pyrogram import filters
 from bot import bot, emby_line, _open
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import user_in_group_on_filter
-from bot.sql_helper.sql_emby import sql_get_emby, sql_count_emby
+from bot.sql_helper.sql_emby import sql_get_emby
 from bot.func_helper.fix_bottons import cr_page_server
 from bot.func_helper.msg_utils import callAnswer, editMessage
-from bot.func_helper.utils import open_check
+
 
 @bot.on_callback_query(filters.regex('server') & user_in_group_on_filter)
 async def server(_, call):
@@ -33,8 +33,6 @@ async def server(_, call):
         server_info = ''.join([item['server'] for item in sever if item['id'] == j])
 
     pwd = '空' if not data.pwd else data.pwd
-    # stat, all_user, tem, timing, allow_code = await open_check()
-    # tg, emby_user, white = sql_count_emby()
     all_user = _open.all_user
     emby_user = _open.tem
     try:

@@ -119,6 +119,40 @@ async def cr_link_one(tg: int, times, count, days: int, method: str):
     return links
 
 
+async def cr_link_invite(tg: int, times, count, days: int, method: str):
+    """
+    创建连接
+    :param tg:
+    :param times:
+    :param count:
+    :param days:
+    :param method:
+    :return:
+    """
+    links = ''
+    code_list = []
+    i = 1
+    if method == 'code':
+        while i <= count:
+            p = await pwd_create(10)
+            uid = f'{ranks.logo}-{times}-invite-{p}'
+            code_list.append(uid)
+            link = f'`{uid}`\n'
+            links += link
+            i += 1
+    elif method == 'link':
+        while i <= count:
+            p = await pwd_create(10)
+            uid = f'{ranks.logo}-{times}-{p}'
+            code_list.append(uid)
+            link = f't.me/{bot_name}?start={uid}\n'
+            links += link
+            i += 1
+    if sql_add_code(code_list, tg, days) is False:
+        return None
+    return links
+
+
 async def cr_link_two(tg: int, for_tg, days: int):
     code_list = []
     invite_code = await pwd_create(11)

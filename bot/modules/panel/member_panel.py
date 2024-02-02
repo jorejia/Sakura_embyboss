@@ -18,7 +18,7 @@ from bot import bot, LOGGER, _open, emby_line, sakura_b, ranks, group, extra_emb
 from pyrogram import filters
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import user_in_group_on_filter
-from bot.func_helper.utils import members_info, tem_alluser, cr_link_one
+from bot.func_helper.utils import members_info, tem_alluser, cr_link_one, cr_link_invite
 from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create_ikb, del_me_ikb, re_delme_ikb, \
     re_reset_ikb, re_changetg_ikb, emby_block_ikb, user_emby_block_ikb, user_emby_unblock_ikb, re_exchange_b_ikb, \
     store_ikb, store_vip_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, user_query_page
@@ -625,11 +625,8 @@ async def do_store_invite(_, call):
                                     f'🏪 兑换规则：\n当前兑换邀请码至少需要 {_open.invite_cost} {sakura_b}。勉励',
                                     True)
         await editMessage(call,
-                          f'🎟️ 请回复创建 [类型] [数量] [模式]\n\n'
-                          f'**类型**：月mon，季sea，半年half，年year\n'
-                          f'**模式**： link -深链接 | code -码\n'
-                          f'**示例**：`sea 1 link` 记作 1条 季度注册码链接\n'
-                          f'**注意**：兑率 30天 = {_open.invite_cost}{sakura_b}\n'
+                          f'🎟️ 请回复创建 [模式]\n\n'
+                          f'**模式**： `link` -链接 | `code` -码\n'
                           f'__取消本次操作，请 /cancel__')
         content = await callListen(call, 120)
         if content is False:
@@ -638,24 +635,16 @@ async def do_store_invite(_, call):
         elif content.text == '/cancel':
             return await asyncio.gather(content.delete(), do_store(_, call))
         try:
-            times, count, method = content.text.split()
-            days = getattr(ExDate(), times)
-            count = int(count)
-            cost = math.floor((days * count / 30) * _open.invite_cost)
-            if e.iv < cost:
-                return await asyncio.gather(content.delete(),
-                                            sendMessage(call,
-                                                        f'您只有 {e.iv}{sakura_b}，而您需要花费 {cost}，超前消费是不可取的哦！？',
-                                                        timer=10),
-                                            do_store(_, call))
-            method = getattr(ExDate(), method)
+            days = 30
+            count = 1
+            method = content.text
         except (AttributeError, ValueError, IndexError):
             return await asyncio.gather(sendMessage(call, f'⚠️ 检查输入，格式似乎有误\n{content.text}', timer=10),
                                         do_store(_, call),
                                         content.delete())
         else:
-            sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - cost)
-            links = await cr_link_one(call.from_user.id, days, count, days, method)
+            sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - _open.invite_cost)
+            links = await cr_link_invite(call.from_user.id, days, count, days, method)
             if links is None:
                 return await editMessage(call, '⚠️ 数据库插入失败，请检查数据库')
             links = f"🎯 {bot_name}已为您生成了 **{days}天** 邀请码 {count} 个\n\n" + links
