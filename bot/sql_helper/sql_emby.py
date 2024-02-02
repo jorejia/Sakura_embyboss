@@ -18,6 +18,7 @@ class Emby(Base):
     pwd = Column(String(255), nullable=True)
     pwd2 = Column(String(255), nullable=True)
     lv = Column(String(1), default='d')
+    invite = Column(String(1), default='n')
     cr = Column(DateTime, nullable=True)
     ex = Column(DateTime, nullable=True)
     us = Column(Integer, default=0)
