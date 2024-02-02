@@ -97,12 +97,12 @@ async def cr_link_one(tg: int, times, count, days: int, method: str):
     """
     links = ''
     code_list = []
+    invite = 'n'
     i = 1
     if method == 'code':
         while i <= count:
             p = await pwd_create(10)
             uid = f'{ranks.logo}-{times}-{p}'
-            invite = 'n'
             code_list.append(uid)
             link = f'`{uid}`\n'
             links += link
@@ -111,7 +111,6 @@ async def cr_link_one(tg: int, times, count, days: int, method: str):
         while i <= count:
             p = await pwd_create(10)
             uid = f'{ranks.logo}-{times}-{p}'
-            invite = 'n'
             code_list.append(uid)
             link = f't.me/{bot_name}?start={uid}\n'
             links += link
@@ -133,12 +132,12 @@ async def cr_link_invite(tg: int, times, count, days: int, method: str):
     """
     links = ''
     code_list = []
+    invite = 'y'
     i = 1
     if method == 'code':
         while i <= count:
             p = await pwd_create(10)
-            uid = f'{ranks.logo}-{times}-{p}'
-            invite = 'y'
+            uid = f'{ranks.logo}-{times}-{p}'            
             code_list.append(uid)
             link = f'`{uid}`\n'
             links += link
@@ -147,7 +146,6 @@ async def cr_link_invite(tg: int, times, count, days: int, method: str):
         while i <= count:
             p = await pwd_create(10)
             uid = f'{ranks.logo}-{times}-{p}'
-            invite = 'y'
             code_list.append(uid)
             link = f't.me/{bot_name}?start={uid}\n'
             links += link
