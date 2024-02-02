@@ -33,14 +33,13 @@ async def server(_, call):
         server_info = ''.join([item['server'] for item in sever if item['id'] == j])
 
     pwd = '空' if not data.pwd else data.pwd
-    line = f'{emby_line}' if data.lv in ['a', 'b'] else ' - **无权查看**'
     stat, all_user, tem, timing, allow_code = await open_check()
     tg, emby_user, white = sql_count_emby()
     try:
         online = emby.get_current_playing_count()
     except:
         online = 'Emby服务器断连 ·0'
-    text = f'**▎当前服务器：{line}**\n\n' \
+    text = f'**▎当前服务器：{emby_line}**\n\n' \
            f'{server_info}' \
            f'· 🎫 总上限 | **{all_user}**\n· 🎟️ 已注册 | **{emby_user}**\n' \
            f'· 🎬 在线 | **{online}** 人\n\n' \
