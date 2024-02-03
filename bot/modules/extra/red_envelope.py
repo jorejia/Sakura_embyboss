@@ -98,7 +98,7 @@ async def send_red_envelop(_, msg):
                                         sendMessage(msg,
                                                     f'**🧧 发红包：**\n\n'
                                                     f'`/red` [总{sakura_b}数] [份数] [mode]\n'
-                                                    f'[mode] 留空为 拼手气, 任意值为 均分',
+                                                    f'[mode] 留空 - 拼手气 | 任意值 - 均分',
                                                     timer=20))
         if not msg.sender_chat:
             e = sql_get_emby(tg=msg.from_user.id)

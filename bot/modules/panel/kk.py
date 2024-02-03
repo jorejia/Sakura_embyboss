@@ -30,7 +30,7 @@ async def user_info(_, msg):
                 pass
             first = await bot.get_chat(uid)
         except (IndexError, KeyError, ValueError):
-            return await sendMessage(msg, '**管理用户**\n\n用法：`/kk` [tg_id]\n或者对某人回复', timer=20)
+            return await sendMessage(msg, '🔔 **管理用户:**\n\n用法：`/kk` [tg_id]\n或者对某人回复', timer=20)
         except BadRequest:
             return await sendMessage(msg, f'{msg.command[1]} - 🎂抱歉，此id未登记bot，或者id错误', timer=20)
         except AttributeError:
