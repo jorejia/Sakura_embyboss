@@ -50,20 +50,16 @@ async def rgs_code(_, msg, register_code):
                     session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new, Emby.lv: 'b'})
                 else:
                     session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
-                await sendMessage(msg, f'🎊 少年郎，恭喜你，已收到 [{first.first_name}](tg://user?id={tg1}) 的{us1}天🎁\n'
+                await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
                                        f'__已解封账户并延长到期时间至(以当前时间计)__\n到期时间：{ex_new.strftime("%Y-%m-%d %H:%M:%S")}')
             elif ex_new < ex:
                 ex_new = data.ex + timedelta(days=us1)
                 session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
                 await sendMessage(msg,
-                                  f'🎊 少年郎，恭喜你，已收到 [{first.first_name}](tg://user?id={tg1}) 的{us1}天🎁\n到期时间：{ex_new}__')
+                                  f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n到期时间：{ex_new}__')
             session.commit()
             new_code = register_code[:-7] + "░" * 7
-            if not user_buy.stat:
-                await sendMessage(msg,
-                                  f'· 🎟️ 注册码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code}\n· 📅 实时到期 - {ex_new}',
-                                  send=True)
-            LOGGER.info(f"【注册码】：{msg.from_user.first_name}[{msg.chat.id}] 使用了 {register_code}，到期时间：{ex_new}")
+            LOGGER.info(f"【续费】：{msg.from_user.first_name}[{msg.chat.id}] 使用了 {register_code}，到期时间：{ex_new}")
 
     else:
         with Session() as session:
@@ -84,13 +80,20 @@ async def rgs_code(_, msg, register_code):
             x = data.us + us1
             session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.us: x, Emby.invite: in1})
             session.commit()
-            await sendPhoto(msg, photo=bot_photo,
-                            caption=f'🎊 少年郎，恭喜你，已经收到了 [{first.first_name}](tg://user?id={tg1}) 发送的邀请注册资格\n\n请选择你的选项~',
-                            buttons=register_code_ikb)
             new_code = register_code[:-7] + "░" * 7
-            if not user_buy.stat:
+            if in1 == 'y':
+                await sendPhoto(msg, photo=bot_photo,
+                                  caption=f'🎊 少年郎，恭喜你，已经收到了 [{first.first_name}](tg://user?id={tg1}) 发送的邀请注册资格\n\n请选择你的选项~',
+                                  buttons=register_code_ikb)
                 await sendMessage(msg,
-                                  f'· 🎟️ 注册码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 可以创建{us1}天账户咯~',
+                                  f'· 🎟️ 邀请码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 可以直接创建 {us1} 天账户咯~',
+                                  send=True)
+            else:
+                await sendPhoto(msg, photo=bot_photo,
+                                  caption=f'🎊 少年郎，恭喜你，已经成功使用注册码\n\n请选择你的选项~',
+                                  buttons=register_code_ikb)
+                await sendMessage(msg,
+                                  f'· 🎟️ 注册码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 服务器未满时可以创建 {us1} 天账户',
                                   send=True)
             LOGGER.info(
                 f"【注册码】：{msg.from_user.first_name}[{msg.chat.id}] 使用了 {register_code} - 可创建 {us1}天账户")
