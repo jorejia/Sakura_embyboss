@@ -96,10 +96,10 @@ async def send_red_envelop(_, msg):
         except (IndexError, KeyError, ValueError):
             return await asyncio.gather(msg.delete(),
                                         sendMessage(msg,
-                                                    f'**🧧 发红包：\n\n'
-                                                    f'/red [总{sakura_b}数] [份数] [mode]**\n\n'
-                                                    f'[mode]留空为 拼手气, 任意值为 均分',
-                                                    timer=60))
+                                                    f'**🧧 发红包：**\n\n'
+                                                    f'`/red` [总{sakura_b}数] [份数] [mode]\n'
+                                                    f'[mode] 留空为 拼手气, 任意值为 均分',
+                                                    timer=20))
         if not msg.sender_chat:
             e = sql_get_emby(tg=msg.from_user.id)
             if not all([e, e.iv >= money, money >= members, members > 0]):
@@ -107,7 +107,7 @@ async def send_red_envelop(_, msg):
                                      msg.chat.restrict_member(msg.from_user.id, ChatPermissions(),
                                                               datetime.now() + timedelta(minutes=1)),
                                      sendMessage(msg, f'[{msg.from_user.first_name}](tg://user?id={msg.from_user.id}) '
-                                                      f'未私聊过bot或{sakura_b}不足，禁言一分钟。', timer=60))
+                                                      f'未私聊过bot或{sakura_b}不足，禁言一分钟。', timer=20))
                 return
             else:
                 new_iv = e.iv - money

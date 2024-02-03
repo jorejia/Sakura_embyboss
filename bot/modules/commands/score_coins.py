@@ -42,8 +42,8 @@ async def score_user(_, msg):
     uid, b, first, gm_name = await get_user_input(msg)
     if not first:
         return await sendMessage(msg,
-                                 "🔔 **使用格式：**[命令符]score [id] [加减分数]\n\n或回复某人[命令符]score [+/-分数] 请确认对象正确",
-                                 timer=60)
+                                 "🔔 **调整积分：**\n\n`/score` [tg_id] [+/-积分]\n或回复某人，请确认对象正确",
+                                 timer=20)
     e = sql_get_emby(tg=uid)
     if not e:
         return await sendMessage(msg, f"数据库中没有[ta](tg://user?id={uid}) 。请先私聊我", buttons=group_f)
@@ -65,8 +65,8 @@ async def coins_user(_, msg):
     uid, b, first, gm_name = await get_user_input(msg)
     if not first:
         return await sendMessage(msg,
-                                 "🔔 **使用格式：**[命令符]coins [id] [+/-币]\n\n或回复某人[命令符]coins [+/-币] 请确认对象正确",
-                                 timer=60)
+                                 "🔔 **调整米币：**\n\n`/coins` [tg_id] [+/-米币]\n或回复某人，请确认对象正确",
+                                 timer=20)
 
     e = sql_get_emby(tg=uid)
     if not e:
