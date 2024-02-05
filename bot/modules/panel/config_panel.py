@@ -186,6 +186,22 @@ async def open_allow_code(_, call):
         LOGGER.info(f"【admin】：管理员 {call.from_user.first_name} 已调整 注册码续期 True")
 
 
+@bot.on_callback_query(filters.regex('change_site_open') & admins_on_filter)
+async def change_site_open(_, call):
+    if _open.site:
+        _open.site = False
+        await callAnswer(call, '**👮🏻‍♂️ 站点已进入隐身模式**', True)
+        await config_p_re(_, call)
+        save_config()
+        LOGGER.info(f"【admin】：管理员 {call.from_user.first_name} 调整站点进入隐身模式")
+    elif not _open.site:
+        _open.site = True
+        await callAnswer(call, '**👮🏻‍♂️ 站点已进入正常模式**', True)
+        await config_p_re(_, call)
+        save_config()
+        LOGGER.info(f"【admin】：管理员 {call.from_user.first_name} 调整站点进入正常模式")
+
+
 @bot.on_callback_query(filters.regex('leave_ban') & admins_on_filter)
 async def open_leave_ban(_, call):
     if _open.leave_ban:

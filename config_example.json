@@ -37,6 +37,7 @@
   ],
   "open": {
     "stat": false,
+    "site": true,
     "all_user": 1000,
     "timing": 0,
     "tem": 0,

@@ -13,7 +13,7 @@ from bot.sql_helper.sql_emby import sql_add_emby
 from bot.func_helper.filters import user_in_group_filter, user_in_group_on_filter
 from bot.func_helper.msg_utils import deleteMessage, sendMessage, sendPhoto, callAnswer, editMessage
 from bot.func_helper.fix_bottons import group_f, judge_start_ikb, judge_group_ikb, cr_kk_ikb
-from bot import bot, prefixes, group, bot_photo, ranks
+from bot import bot, prefixes, group, bot_photo, ranks, _open
 
 
 # 反命令提示
@@ -44,12 +44,19 @@ async def count_info(_, msg):
 
 # 私聊开启面板
 @bot.on_message(filters.command('start', prefixes) & filters.private)
-async def p_start(_, msg):
+async def p_start(_, msg):    
     if not await user_in_group_filter(_, msg):
-        return await asyncio.gather(deleteMessage(msg),
-                                    sendMessage(msg,
-                                                '💢 使用bot请加入我们的群组和频道，然后再回来点 /start 哦~',
-                                                buttons=judge_group_ikb))
+        if not _open.site:
+            return await asyncio.gather(deleteMessage(msg),
+                                        sendMessage(msg,
+                                                    '🌻 **只在此山中，云深不知处**\n\n站点已开启隐身模式，暂不接收新人入群\n期待我们未来再次相遇~',
+                                                    timer=30))
+        else:   
+            return await asyncio.gather(deleteMessage(msg),
+                                        sendMessage(msg,
+                                                    '🌸 **桃花流水窅然去，别有天地非人间**\n\n恭喜你发现了MICU Cloud Media，欢迎加入我们的群组和频道\n加完之后别忘了回来点 /start 启用机器人哦~',
+                                                    buttons=judge_group_ikb,
+                                                    timer=60))
     try:
         u = msg.command[1].split('-')[0]
         if u in f'{ranks.logo}' or u == str(msg.from_user.id):

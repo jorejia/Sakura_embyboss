@@ -32,6 +32,7 @@ class UserBuy(BaseModel):
 
 class Open(BaseModel):
     stat: bool
+    site: bool
     all_user: int
     timing: int = 0
     tem: Optional[int] = 0

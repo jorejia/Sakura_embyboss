@@ -2,7 +2,7 @@ from cacheout import Cache
 from pykeyboard import InlineKeyboard, InlineButton
 from pyrogram.types import InlineKeyboardMarkup
 from pyromod.helpers import ikb, array_chunk
-from bot import chanel, main_group, bot_name, extra_emby_libs, tz_id, tz_ad, tz_api, _open, user_buy, sakura_b, \
+from bot import chanel, main_group, bot_name, extra_emby_libs, tz_id, tz_ad, tz_api, _open, site_open, user_buy, sakura_b, \
     schedall
 from bot.func_helper import nezha_res
 from bot.func_helper.emby import emby
@@ -35,8 +35,7 @@ def judge_start_ikb(uid: int) -> InlineKeyboardMarkup:
 group_f = ikb([[('点击我(●ˇ∀ˇ●)', f't.me/{bot_name}', 'url')]])
 # un in group
 judge_group_ikb = ikb([[('🌟 上新通知频道', f't.me/{chanel}', 'url'),
-                        ('💫 MICU Media 股东会', f't.me/{main_group}', 'url')],
-                       [('❌ 关闭消息', 'closeit')]])
+                        ('💫 MICU Media 股东会', f't.me/{main_group}', 'url')]])
 
 """members ↓"""
 
@@ -212,9 +211,10 @@ def config_preparation() -> InlineKeyboardMarkup:
     buy_stat = '✅' if user_buy.stat else '❎'
     leave_ban = '✅' if _open.leave_ban else '❎'
     uplays = '✅' if _open.uplays else '❎'
+    site = '✅' if _open.site else '❎'
     keyboard = ikb(
         [[('📄 导出日志', 'log_out'), ('📌 设置探针', 'set_tz')],
-         [('💠 emby线路', 'set_line'), ('🎬 显/隐指定库', 'set_block')],
+         [('💠 emby线路', 'set_line'), (f'{site} 正常/隐身模式', 'change_site_open')],
          [(f'{code} 注册码续期', 'open_allow_code'), (f'{buy_stat} 开关购买', 'set_buy')],
          [(f'{leave_ban} 退群封禁', 'leave_ban'), (f'{uplays} 自动看片结算', 'set_uplays')],
          [('🔙 返回', 'manage')]])

@@ -76,8 +76,8 @@ async def coins_user(_, msg):
     us = e.iv + b
     if sql_update_emby(Emby.tg == uid, iv=us):
         await asyncio.gather(sendMessage(msg,
-                                         f"· 🎯 {gm_name} 调节了 [{first.first_name}](tg://user?id={uid}) {sakura_b}： {b}"
-                                         f"\n· 🎟️ 实时{sakura_b}: **{us}**"),
+                                         f"· 🎯 恭喜 [{first.first_name}](tg://user?id={uid}) 获得了{b}{sakura_b}奖励\n"
+                                         f"· 🤩🤩 羡慕死了~"),
                              msg.delete())
         LOGGER.info(
             f"【admin】[{sakura_b}]- {gm_name} 对 {first.first_name}-{uid}  {b}{sakura_b}")
