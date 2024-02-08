@@ -42,11 +42,11 @@ async def renew_all(_, msg):
         end = time.perf_counter()
         times = end - start
         await send.edit(
-            f"⚡【派送任务】\n  批量派出 {a} 天 * {b} ，耗时：{times:.3f}s\n 时间已到账，正在向每个拥有emby的用户私发消息，短时间内请不要重复使用")
+            f"⚡【派送任务】\n  批量派出 {a} 天 * {b} ，耗时：{times:.3f}s\n 时间已到账，正在向每个拥有emby的用户私发消息~")
         LOGGER.info(
             f"【派送任务】 - {msg.from_user.first_name}({msg.from_user.id}) 派出 {a} 天 * {b} 更改用时{times:.3f} s")
         for l in ls:
-            await bot.send_message(l[0], f"🎯 管理员 {msg.from_user.first_name} 调节了您的账户 到期时间：{a}天"
+            await bot.send_message(l[0], f"🎯 恭喜获得{a}天的时长奖励~"
                                          f'\n📅 实时到期：{l[1].strftime("%Y-%m-%d %H:%M:%S")}')
         LOGGER.info(
             f"【派送任务】 - {msg.from_user.first_name}({msg.from_user.id}) 派出 {a} 天 * {b}，消息私发完成")
