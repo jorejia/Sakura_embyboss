@@ -44,10 +44,10 @@ action_dict = {
 # 字典，对应的操作函数的参数和id
 args_dict = {
     "dayrank": {'hour': 18, 'minute': 30, 'id': 'day_ranks'},
-    "weekrank": {'day_of_week': "sun", 'hour': 23, 'minute': 59, 'id': 'week_ranks'},
+    "weekrank": {'day_of_week': "sun", 'hour': 23, 'minute': 50, 'id': 'week_ranks'},
     "dayplayrank": {'hour': 23, 'minute': 0, 'id': 'user_day_plays'},
     "weekplayrank": {'day_of_week': "sun", 'hour': 23, 'minute': 0, 'id': 'user_week_plays'},
-    "check_ex": {'hour': 1, 'minute': 30, 'id': 'check_expired'},
+    "check_ex": {'hour': 0, 'minute': 0, 'id': 'check_expired'},
     "low_activity": {'hour': 8, 'minute': 30, 'id': 'check_low_activity'},
     "backup_db": {'hour': 2, 'minute': 30, 'id': 'backup_db'}
 }
