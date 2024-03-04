@@ -26,7 +26,7 @@ async def members_info(tg=None, name=None):
     基础资料 - 可传递 tg,emby_name
     :param tg: tg_id
     :param name: emby_name
-    :return: name, lv, ex, us, embyid, pwd2
+    :return: name, lv, ex, us, embyid, pwd2, douban
     """
     if tg is None:
         tg = name
@@ -37,6 +37,7 @@ async def members_info(tg=None, name=None):
         name = data.name or '无账户信息'
         pwd2 = data.pwd2
         embyid = data.embyid
+        douban = data.douban
         us = [data.us, data.iv]
         lv_dict = {'a': '白名单', 'b': '**正常**', 'c': '**已禁用**', 'd': '未注册'}  # , 'e': '**21天未活跃/无信息**'
         lv = lv_dict.get(data.lv, '未知')
@@ -48,7 +49,7 @@ async def members_info(tg=None, name=None):
             ex = ' __无需保号，放心食用__'
         else:
             ex = data.ex or '无账户信息'
-        return name, lv, ex, us, embyid, pwd2
+        return name, lv, ex, us, embyid, pwd2, douban
 
 
 async def open_check():
