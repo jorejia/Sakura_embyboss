@@ -17,6 +17,7 @@ class Emby(Base):
     name = Column(String(255), nullable=True)
     pwd = Column(String(255), nullable=True)
     pwd2 = Column(String(255), nullable=True)
+    douban = Column(String(255), nullable=True)
     lv = Column(String(1), default='d')
     invite = Column(String(1), default='n')
     cr = Column(DateTime, nullable=True)
@@ -103,7 +104,7 @@ def sql_get_emby(tg):
     with Session() as session:
         try:
             # 使用or_方法来表示或者的逻辑，如果有tg就用tg，如果有embyid就用embyid，如果有name就用name，如果都没有就返回None
-            emby = session.query(Emby).filter(or_(Emby.tg == tg, Emby.name == tg, Emby.embyid == tg)).first()
+            emby = session.query(Emby).filter(or_(Emby.tg == tg, Emby.name == tg, Emby.embyid == tg, Emby.douban == tg)).first()
             return emby
         except:
             return None
