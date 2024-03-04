@@ -39,7 +39,7 @@ async def members_info(tg=None, name=None):
         embyid = data.embyid
         douban = data.douban
         us = [data.us, data.iv]
-        lv_dict = {'a': '管理员', 'b': '**正常**', 'c': '**已禁用**', 'd': '未注册'}  # , 'e': '**21天未活跃/无信息**'
+        lv_dict = {'a': '管理员', 'b': '**会员**', 'c': '**已禁用**', 'd': '未注册'}  # , 'e': '**21天未活跃/无信息**'
         lv = lv_dict.get(data.lv, '未知')
         if lv == '管理员':
             ex = '+ ∞'
