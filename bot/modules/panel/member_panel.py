@@ -100,13 +100,15 @@ async def members(_, call):
         return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start录入', True)
 
     await callAnswer(call, f"✅ 用户界面")
-    name, lv, ex, us, embyid, pwd2 = data
+    name, lv, ex, us, embyid, pwd2, douban = data
     text = f"▎__欢迎进入用户面板！{call.from_user.first_name}__\n\n" \
-           f"**· 🆔 用户のID** | `{call.from_user.id}`\n" \
-           f"**· 📊 当前状态** | {lv}\n" \
-           f"**· 🍒 积分{sakura_b}** | {us[0]} · {us[1]}\n" \
-           f"**· 💠 账号名称** | [{name}](tg://user?id={call.from_user.id})\n" \
-           f"**· 🚨 到期时间** | {ex}"
+           f"**· 🍒 用户のID** | `{call.from_user.id}`\n" \
+           f"**· 🍓 当前状态** | {lv}\n" \
+           f"**· 🫛 豆瓣 ID**  | {douban}\n" \
+           f"**· 🍥 当前{sakura_b}** | {us[1]}\n" \
+           f"**· ⏰ 未用天数** | {us[0]}\n" \
+           f"**· 💠 账号名称** | {name}\n" \
+           f"**· 🚨 到期时间** | **{ex}**\n"
     if not embyid:
         await editMessage(call, text, members_ikb(False))
     else:
