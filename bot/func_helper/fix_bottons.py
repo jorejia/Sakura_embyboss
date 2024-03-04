@@ -246,7 +246,7 @@ async def cr_kk_ikb(uid, first):
     if data is None:
         text += f'**· 🆔 TG** ：[{first}](tg://user?id={uid}) [`{uid}`]\n数据库中没有此ID。ta 还没有私聊过我'
     else:
-        name, lv, ex, us, embyid, pwd2 = data
+        name, lv, ex, us, embyid, pwd2, douban = data
         if name != '无账户信息':
             ban = "🌟 解除禁用" if lv == "**已禁用**" else '💢 禁用账户'
             keyboard = [[ban, f'user_ban-{uid}'], ['⚠️ 删除账户', f'closeemby-{uid}']]
@@ -274,6 +274,7 @@ async def cr_kk_ikb(uid, first):
         text += f"**· 🍉 TG&名称** | [{first}](tg://user?id={uid})\n" \
                 f"**· 🍒 识别のID** | `{uid}`\n" \
                 f"**· 🍓 当前状态** | {lv}\n" \
+                f"**· 🍒 豆瓣ID** | {douban}\n" \
                 f"**· 🍥 积分{sakura_b}** | {us[0]} · {us[1]}\n" \
                 f"**· 💠 账号名称** | {name}\n" \
                 f"**· 🚨 到期时间** | **{ex}**\n"
