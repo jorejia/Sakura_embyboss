@@ -18,7 +18,7 @@ async def user_in_checkin(_, call):
         if not e:
             return await callAnswer(call, '🧮 未查询到数据库', True)
         elif not e.ch or e.ch.strftime("%Y-%m-%d") < now.strftime("%Y-%m-%d"):
-            if e.ex and e.ex.strftime("%Y-%m-%d") < now.strftime("%Y-%m-%d"):
+            if e.ex and e.ex.strftime("%Y-%m-%d") > now.strftime("%Y-%m-%d"):
                 reward = random.randint(1, 5) * 2
                 s = e.iv + reward
                 sql_update_emby(Emby.tg == call.from_user.id, iv=s, ch=now)
