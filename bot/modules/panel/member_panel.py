@@ -106,7 +106,7 @@ async def members(_, call):
     text = f"▎__欢迎进入用户面板！{call.from_user.first_name}__\n\n" \
            f"**· 🍒 用户のID** | `{call.from_user.id}`\n" \
            f"**· 🍓 当前状态** | {lv}\n" \
-           f"**· 🫛 豆瓣 ID**  | {douban}\n" \
+           f"**· 🫛 豆瓣のID** | {douban}\n" \
            f"**· 🍥 当前{sakura_b}** | {us[1]}\n" \
            f"**· ⏰ 未用天数** | {us[0]}\n" \
            f"**· 💠 账号名称** | {name}\n" \
