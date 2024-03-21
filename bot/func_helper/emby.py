@@ -6,7 +6,7 @@ emby的api操作方法
 from datetime import datetime, timedelta, timezone
 
 import requests as r
-from bot import emby_url, emby_api, _open, emby_block, schedall, extra_emby_libs, LOGGER, another_line
+from bot import emby_url, emby_api, _open, save_config, emby_block, schedall, extra_emby_libs, LOGGER, another_line
 from bot.sql_helper.sql_emby import sql_update_emby, Emby
 from bot.sql_helper.sql_emby2 import sql_add_emby2, sql_delete_emby2
 from bot.func_helper.utils import pwd_create, convert_runtime, cache
@@ -162,6 +162,7 @@ class Embyservice:
                 if sql_update_emby(Emby.embyid == id, embyid=None, name=None, pwd=None, pwd2=None, lv='d', cr=None,
                                    ex=None):
                     _open.tem = _open.tem - 1
+                    save_config()
                     return True
                 else:
                     return False
