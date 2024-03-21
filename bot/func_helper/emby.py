@@ -161,6 +161,7 @@ class Embyservice:
             if stats is None:
                 if sql_update_emby(Emby.embyid == id, embyid=None, name=None, pwd=None, pwd2=None, lv='d', cr=None,
                                    ex=None):
+                    _open.tem = _open.tem - 1
                     return True
                 else:
                     return False
