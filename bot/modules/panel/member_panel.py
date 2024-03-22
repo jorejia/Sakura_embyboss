@@ -589,7 +589,7 @@ async def dianbo(_, call):
         return callAnswer(call, '❌ 仅持有账户可进行豆瓣点播', True)
 
 
-@bot.on_callback_query(filters.regex('dianbo-add') & user_in_group_on_filter)
+@bot.on_callback_query(filters.regex('dianadd') & user_in_group_on_filter)
 async def dianbo_add(_, call):
     await asyncio.gather(callAnswer(call, '🫛 绑定豆瓣ID'), deleteMessage(call))
     msg = await ask_return(call, text='🫛 **【绑定豆瓣ID】**：\n\n'
@@ -604,7 +604,7 @@ async def dianbo_add(_, call):
         await sendMessage(call, f'🎊 恭喜你，豆瓣账号 `{msg.text}` 已和 MICU Cloud Media 同步，去添加你喜欢的影视到想看吧~')
 
 
-@bot.on_callback_query(filters.regex('dianbo-del') & user_in_group_on_filter)
+@bot.on_callback_query(filters.regex('diandel') & user_in_group_on_filter)
 async def dianbo_del(_, call):
         await callAnswer(call, '✖️ 清除豆瓣绑定')
         e = sql_get_emby(tg=call.from_user.id)

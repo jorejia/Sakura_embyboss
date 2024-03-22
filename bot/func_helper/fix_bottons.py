@@ -68,10 +68,10 @@ re_exchange_b_ikb = ikb([[('♻️ 重试', 'exchange'), ('❌ 关闭', 'closeit
 re_douban_ikb = ikb([[('♻️ 重试', 'dianbo-add'), ('❌ 关闭', 'closeit')]])
 
 def dianbo_ikb():
-    return ikb([[(f'✖️ 清除豆瓣绑定', 'dianbo-del')], [('❌ 取消', 'members')]])
+    return ikb([[(f'✖️ 清除豆瓣绑定', 'diandel')], [('❌ 取消', 'members')]])
 
 def dianbo_no_ikb():
-    return ikb([[(f'🫛 绑定豆瓣ID', 'dianbo-add')], [('❌ 取消', 'members')]])
+    return ikb([[(f'🫛 绑定豆瓣ID', 'dianadd')], [('❌ 取消', 'members')]])
 
 
 
