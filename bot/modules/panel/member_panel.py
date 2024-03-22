@@ -606,7 +606,6 @@ async def dianbo_add(_, call):
 
 @bot.on_callback_query(filters.regex('diandel') & user_in_group_on_filter)
 async def dianbo_del(_, call):
-        await callAnswer(call, '✖️ 清除豆瓣绑定')
         e = sql_get_emby(tg=call.from_user.id)
         douban = e.douban
         if douban:
