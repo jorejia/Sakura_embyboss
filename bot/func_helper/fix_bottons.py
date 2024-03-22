@@ -68,18 +68,22 @@ re_exchange_b_ikb = ikb([[('♻️ 重试', 'exchange'), ('❌ 关闭', 'closeit
 re_douban_ikb = ikb([[('♻️ 重试', 'dianbo-add'), ('❌ 关闭', 'closeit')]])
 
 def dianbo_ikb():
-    return ikb([[(f'✖️ 清除豆瓣绑定', 'diandel')], [('❌ 取消', 'members')]])
+    return ikb([[('🫛 绑定豆瓣ID', 'dianadd'), ('✖️ 清除绑定', 'diandel')], [('🔙 返回', 'members')]])
 
 def dianbo_no_ikb():
-    return ikb([[(f'🫛 绑定豆瓣ID', 'dianadd')], [('❌ 取消', 'members')]])
+    return ikb([[], [('❌ 取消', 'members')]])
 
 
 
 def store_ikb():
-    return ikb([[(f'🕐 兑换时长', 'store-renew'), (f'🔍 我的邀请码', 'store-query')], [(f'❌ 取消', 'members')]])
+    return ikb([[(f'🕐 兑换时长', 'store-renew')], [(f'🔍 我的邀请码', 'store-query'), (f'🔙 返回', 'members')]])
 
 def store_vip_ikb():
-    return ikb([[(f'🕐 兑换时长', 'store-renew'), (f'🔍 我的邀请码', 'store-query')], [(f'🎟️ 兑换邀请码', 'store-invite')], [(f'❌ 取消', 'members')]])
+    return ikb([[(f'🕐 兑换时长', 'store-renew'), (f'🎟️ 兑换邀请码', 'store-invite')], [(f'🔍 我的邀请码', 'store-query'), (f'🔙 返回', 'members')]])
+
+def store_c_ikb():
+    return ikb([[(f'🔍 我的邀请码', 'store-query'), (f'🔙 返回', 'members')]])
+
 
 re_store_renew = ikb([[('✨ 重新输入', 'changetg'), ('💫 取消输入', 'storeall')]])
 

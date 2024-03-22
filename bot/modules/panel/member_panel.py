@@ -21,7 +21,7 @@ from bot.func_helper.filters import user_in_group_on_filter
 from bot.func_helper.utils import members_info, tem_alluser, cr_link_one, cr_link_invite
 from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create_ikb, del_me_ikb, re_delme_ikb, \
     re_reset_ikb, re_changetg_ikb, emby_block_ikb, user_emby_block_ikb, user_emby_unblock_ikb, re_exchange_b_ikb, \
-    dianbo_ikb, dianbo_no_ikb, re_douban_ikb, store_ikb, store_vip_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, user_query_page
+    dianbo_ikb, re_douban_ikb, store_ikb, store_vip_ikb, store_c_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, user_query_page
 from bot.func_helper.msg_utils import callAnswer, editMessage, callListen, sendMessage, ask_return, deleteMessage
 from bot.modules.commands import p_start
 from bot.modules.commands.exchange import rgs_code
@@ -562,11 +562,15 @@ async def do_store(_, call):
     ch_day=e.ex - datetime.now()
     if ch_day.days > 90 or e.lv == 'a':
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
-                         editMessage(call, f'**🏪 请选择想要使用的服务：**\n⚖️ 自动{sakura_b}续期：{_open.exchange}',
+                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n会员可见：兑换时长(按天)\n剩余时长大于90天可见：兑换邀请码',
                                      buttons=store_vip_ikb()))
+    elif e.lv == 'c':
+        await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
+                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n会员可见：兑换时长(按天)\n剩余时长大于90天可见：兑换邀请码',
+                                     buttons=store_c_ikb()))
     else:
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
-                         editMessage(call, f'**🏪 请选择想要使用的服务：**\n⚖️ 自动{sakura_b}续期：{_open.exchange}',
+                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n会员可见：兑换时长(按天)\n剩余时长大于90天可见：兑换邀请码',
                                      buttons=store_ikb()))
 
 
@@ -576,15 +580,9 @@ async def dianbo(_, call):
     e = sql_get_emby(tg=call.from_user.id)
     douban = e.douban
     if e.lv and (e.lv == 'b' or e.lv == 'a'):
-        if douban:
-            await asyncio.gather(callAnswer(call, '🎬 豆瓣点播'),
-                            editMessage(call, f'**🎬 绑定豆瓣 - 开启点播之旅~**\n⚖️ 当前豆瓣ID：`{douban}`',
-                                        buttons=dianbo_ikb()))
-        else:
-            await asyncio.gather(callAnswer(call, '🎬 豆瓣点播'),
-                            editMessage(call, f'**🎬 绑定豆瓣 - 开启点播之旅~**\n⚖️ 当前豆瓣ID：`未绑定`',
-                                        buttons=dianbo_no_ikb()))
-
+        await asyncio.gather(callAnswer(call, '🎬 豆瓣点播'),
+                        editMessage(call, f'**🎬 绑定豆瓣 - 开启点播之旅~**\n⚖️ 当前豆瓣ID：`{douban}`',
+                                    buttons=dianbo_ikb()))
     else:
         return callAnswer(call, '❌ 仅持有账户可进行豆瓣点播', True)
 
