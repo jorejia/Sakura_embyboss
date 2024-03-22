@@ -546,7 +546,7 @@ async def user_emby_unblock(_, call):
 async def call_exchange(_, call):
     await asyncio.gather(callAnswer(call, '🔋 使用注册码'), deleteMessage(call))
     msg = await ask_return(call, text='🔋 **【使用注册码】**：\n\n'
-                                      f'- 请在120s内对我发送你的注册码，形如\n`{ranks.logo}-xx-xxxx`\n退出点 /cancel',
+                                      f'- 请在120s内对我发送你的注册码，形如\n`{ranks.logo}-xx-xxxx`\n\n退出点 /cancel',
                            button=re_exchange_b_ikb)
     if msg is False:
         return
@@ -578,11 +578,11 @@ async def dianbo(_, call):
     if e.lv and (e.lv == 'b' or e.lv == 'a'):
         if douban:
             await asyncio.gather(callAnswer(call, '🎬 豆瓣点播'),
-                            editMessage(call, f'**🎬 绑定豆瓣ID即可开启点播之旅~**\n⚖️ 当前豆瓣ID：`{douban}`',
+                            editMessage(call, f'**🎬 绑定豆瓣 - 开启点播之旅~**\n⚖️ 当前豆瓣ID：`{douban}`',
                                         buttons=dianbo_ikb()))
         else:
             await asyncio.gather(callAnswer(call, '🎬 豆瓣点播'),
-                            editMessage(call, f'**🎬 绑定豆瓣ID即可开启点播之旅~**\n⚖️ 当前豆瓣ID：`未绑定`',
+                            editMessage(call, f'**🎬 绑定豆瓣 - 开启点播之旅~**\n⚖️ 当前豆瓣ID：`未绑定`',
                                         buttons=dianbo_no_ikb()))
 
     else:
@@ -593,7 +593,7 @@ async def dianbo(_, call):
 async def dianbo_add(_, call):
     await asyncio.gather(callAnswer(call, '🫛 绑定豆瓣ID'), deleteMessage(call))
     msg = await ask_return(call, text='🫛 **【绑定豆瓣ID】**：\n\n'
-                                      f'- 请在120s内对我发送你的豆瓣ID，数字ID或者个性化ID，不能是用户名\n退出点 /cancel',
+                                      f'- 请在120s内对我发送你的豆瓣ID，数字ID或者个性化ID，不能是用户名\n\n退出点 /cancel',
                            button=re_douban_ikb)
     if msg is False:
         return
