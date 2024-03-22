@@ -562,15 +562,15 @@ async def do_store(_, call):
     ch_day=e.ex - datetime.now()
     if ch_day.days > 90 or e.lv == 'a':
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
-                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n会员可见：兑换时长(按天)\n剩余时长大于90天可见：兑换邀请码',
+                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n- 会员可见：兑换时长(按天)\n- 剩余时长大于90天可见：兑换邀请码',
                                      buttons=store_vip_ikb()))
     elif e.lv == 'c':
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
-                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n会员可见：兑换时长(按天)\n剩余时长大于90天可见：兑换邀请码',
+                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n- 会员可见：兑换时长(按天)\n- 剩余时长大于90天可见：兑换邀请码',
                                      buttons=store_c_ikb()))
     else:
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
-                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n会员可见：兑换时长(按天)\n剩余时长大于90天可见：兑换邀请码',
+                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n- 会员可见：兑换时长(按天)\n- 剩余时长大于90天可见：兑换邀请码',
                                      buttons=store_ikb()))
 
 
@@ -589,6 +589,9 @@ async def dianbo(_, call):
 
 @bot.on_callback_query(filters.regex('dianadd') & user_in_group_on_filter)
 async def dianbo_add(_, call):
+    e = sql_get_emby(tg=call.from_user.id)
+    if e.douban:
+        return callAnswer(call, '你已经绑定了豆瓣ID，不可以贪心哦，修改请先清除绑定', True)   
     await asyncio.gather(callAnswer(call, '🫛 绑定豆瓣ID'), deleteMessage(call))
     msg = await ask_return(call, text='🫛 **【绑定豆瓣ID】**：\n\n'
                                       f'- 请在120s内对我发送你的豆瓣ID，数字ID或者个性化ID，不能是用户名\n\n退出点 /cancel',
