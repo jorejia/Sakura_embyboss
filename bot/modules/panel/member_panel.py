@@ -577,8 +577,11 @@ async def do_store(_, call):
 # 豆瓣点播
 @bot.on_callback_query(filters.regex('dianbo') & user_in_group_on_filter)
 async def dianbo(_, call):
-    e = sql_get_emby(tg=call.from_user.id)
-    douban = e.douban
+    e = sql_get_emby(tg=call.from_user.id)    
+    if e.douban:
+        douban = e.douban
+    else:
+        douban = '未绑定'
     if e.lv and (e.lv == 'b' or e.lv == 'a'):
         await asyncio.gather(callAnswer(call, '🎬 豆瓣点播'),
                         editMessage(call, f'**🎬 绑定豆瓣 - 开启点播之旅~**\n⚖️ 当前豆瓣ID：`{douban}`',
@@ -591,7 +594,8 @@ async def dianbo(_, call):
 async def dianbo_add(_, call):
     e = sql_get_emby(tg=call.from_user.id)
     if e.douban:
-        return callAnswer(call, '你已经绑定了豆瓣ID，不可以贪心哦，修改请先清除绑定', True)   
+        await callAnswer(call, '你已经绑定了豆瓣ID，不可以贪心哦，修改请先清除绑定', True)
+        return
     await asyncio.gather(callAnswer(call, '🫛 绑定豆瓣ID'), deleteMessage(call))
     msg = await ask_return(call, text='🫛 **【绑定豆瓣ID】**：\n\n'
                                       f'- 请在120s内对我发送你的豆瓣ID，数字ID或者个性化ID，不能是用户名\n\n退出点 /cancel',
