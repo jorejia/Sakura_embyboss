@@ -591,8 +591,8 @@ async def dianbo(_, call):
 
 @bot.on_callback_query(filters.regex('dianbo-add') & user_in_group_on_filter)
 async def dianbo_add(_, call):
-    await asyncio.gather(callAnswer(call, '🔋 绑定豆瓣ID'), deleteMessage(call))
-    msg = await ask_return(call, text='🔋 **【绑定豆瓣ID】**：\n\n'
+    await asyncio.gather(callAnswer(call, '🫛 绑定豆瓣ID'), deleteMessage(call))
+    msg = await ask_return(call, text='🫛 **【绑定豆瓣ID】**：\n\n'
                                       f'- 请在120s内对我发送你的豆瓣ID，数字ID或者个性化ID，不能是用户名\n退出点 /cancel',
                            button=re_douban_ikb)
     if msg is False:
@@ -606,6 +606,7 @@ async def dianbo_add(_, call):
 
 @bot.on_callback_query(filters.regex('dianbo-del') & user_in_group_on_filter)
 async def dianbo_del(_, call):
+        await callAnswer(call, '✖️ 清除豆瓣绑定')
         e = sql_get_emby(tg=call.from_user.id)
         douban = e.douban
         if douban:

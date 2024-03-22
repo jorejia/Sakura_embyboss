@@ -65,13 +65,13 @@ re_bindtg_ikb = ikb([[('✨ 绑定TG', 'bindtg'), ('💫 用户主页', 'members
 re_delme_ikb = ikb([[('♻️ 重试', 'delme')], [('🔙 返回', 'members')]])
 re_reset_ikb = ikb([[('♻️ 重试', 'reset')], [('🔙 返回', 'members')]])
 re_exchange_b_ikb = ikb([[('♻️ 重试', 'exchange'), ('❌ 关闭', 'closeit')]])
-re_douban_ikb = ikb([[('♻️ 重试', 'douban-add'), ('❌ 关闭', 'closeit')]])
+re_douban_ikb = ikb([[('♻️ 重试', 'dianbo-add'), ('❌ 关闭', 'closeit')]])
 
 def dianbo_ikb():
-    return ikb([[(f'✖️ 清除豆瓣绑定', 'dianbo-del'), (f'❌ 取消', 'members')]])
+    return ikb([[(f'✖️ 清除豆瓣绑定', 'dianbo-del'), ('❌ 取消', 'members')]])
 
 def dianbo_no_ikb():
-    return ikb([[(f'🫛 绑定豆瓣ID', 'dianbo-add'), (f'❌ 取消', 'members')]])
+    return ikb([[(f'🫛 绑定豆瓣ID', 'dianbo-add'), ('❌ 取消', 'members')]])
 
 
 
