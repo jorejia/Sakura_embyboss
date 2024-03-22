@@ -26,7 +26,7 @@ async def rmemby_user(_, msg):
     if e is None:
         return await reply.edit(f"♻️ 没有检索到 {b} 账户，请确认重试或手动检查。")
 
-    if e.embyid is not None:
+    if e.lv and e.lv == 'b':
         first = await bot.get_chat(e.tg)
         if await emby.emby_del(id=e.embyid) is True:
             try:
@@ -39,5 +39,9 @@ async def rmemby_user(_, msg):
                 pass
             LOGGER.info(
                 f"【admin】：管理员 {msg.from_user.first_name} 执行删除 {first.first_name}-{e.tg} 账户 {e.name}")
+    elif e.lv and e.lv == 'c':
+        await reply.edit(f"💢 [ta](tg://user?id={b}) 禁用期间不可删除账户")
+    elif e.lv and e.lv == 'a':
+        await reply.edit(f"💢 [ta](tg://user?id={b}) 管理员不可删除账户")
     else:
         await reply.edit(f"💢 [ta](tg://user?id={b}) 还没有注册账户呢")

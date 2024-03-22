@@ -21,7 +21,7 @@ from bot.func_helper.filters import user_in_group_on_filter
 from bot.func_helper.utils import members_info, tem_alluser, cr_link_one, cr_link_invite
 from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create_ikb, del_me_ikb, re_delme_ikb, \
     re_reset_ikb, re_changetg_ikb, emby_block_ikb, user_emby_block_ikb, user_emby_unblock_ikb, re_exchange_b_ikb, \
-    store_ikb, store_vip_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, user_query_page
+    dianbo_ikb, dianbo_no_ikb, re_douban_ikb, store_ikb, store_vip_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, user_query_page
 from bot.func_helper.msg_utils import callAnswer, editMessage, callListen, sendMessage, ask_return, deleteMessage
 from bot.modules.commands import p_start
 from bot.modules.commands.exchange import rgs_code
@@ -106,7 +106,7 @@ async def members(_, call):
     text = f"▎__欢迎进入用户面板！{call.from_user.first_name}__\n\n" \
            f"**· 🍒 用户のID** | `{call.from_user.id}`\n" \
            f"**· 🍓 当前状态** | {lv}\n" \
-           f"**· 🫛 豆瓣のID** | {douban}\n" \
+           f"**· 🫛 豆瓣のID** | `{douban}`\n" \
            f"**· 🍥 当前{sakura_b}** | {us[1]}\n" \
            f"**· ⏰ 未用天数** | {us[0]}\n" \
            f"**· 💠 账号名称** | {name}\n" \
@@ -568,6 +568,51 @@ async def do_store(_, call):
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
                          editMessage(call, f'**🏪 请选择想要使用的服务：**\n⚖️ 自动{sakura_b}续期：{_open.exchange}',
                                      buttons=store_ikb()))
+
+
+# 豆瓣点播
+@bot.on_callback_query(filters.regex('dianbo') & user_in_group_on_filter)
+async def dianbo(_, call):
+    e = sql_get_emby(tg=call.from_user.id)
+    douban = e.douban
+    if e.lv and (e.lv == 'b' or e.lv == 'a'):
+        if douban:
+            await asyncio.gather(callAnswer(call, '🎬 豆瓣点播'),
+                            editMessage(call, f'**🎬 绑定豆瓣ID即可开启点播之旅~**\n⚖️ 当前豆瓣ID：`{douban}`',
+                                        buttons=dianbo_ikb()))
+        else:
+            await asyncio.gather(callAnswer(call, '🎬 豆瓣点播'),
+                            editMessage(call, f'**🎬 绑定豆瓣ID即可开启点播之旅~**\n⚖️ 当前豆瓣ID：`未绑定`',
+                                        buttons=dianbo_no_ikb()))
+
+    else:
+        return callAnswer(call, '❌ 仅持有账户可进行豆瓣点播', True)
+
+
+@bot.on_callback_query(filters.regex('dianbo-add') & user_in_group_on_filter)
+async def dianbo_add(_, call):
+    await asyncio.gather(callAnswer(call, '🔋 绑定豆瓣ID'), deleteMessage(call))
+    msg = await ask_return(call, text='🔋 **【绑定豆瓣ID】**：\n\n'
+                                      f'- 请在120s内对我发送你的豆瓣ID，数字ID或者个性化ID，不能是用户名\n退出点 /cancel',
+                           button=re_douban_ikb)
+    if msg is False:
+        return
+    elif msg.text == '/cancel':
+        await asyncio.gather(msg.delete(), p_start(_, msg))
+    else:
+        sql_update_emby(Emby.tg == call.from_user.id, douban=msg.text)
+        await sendMessage(call, f'🎊 恭喜你，豆瓣账号 `{msg.text}` 已和 MICU Cloud Media 同步，去添加你喜欢的影视到想看吧~')
+
+
+@bot.on_callback_query(filters.regex('dianbo-del') & user_in_group_on_filter)
+async def dianbo_del(_, call):
+        e = sql_get_emby(tg=call.from_user.id)
+        douban = e.douban
+        if douban:
+            sql_update_emby(Emby.tg == call.from_user.id, douban='')
+            await callAnswer(call, '成功清除豆瓣绑定', True)
+        else:
+            await callAnswer(call, '当前未绑定豆瓣ID', True)
 
 
 @bot.on_callback_query(filters.regex('store-renew') & user_in_group_on_filter)

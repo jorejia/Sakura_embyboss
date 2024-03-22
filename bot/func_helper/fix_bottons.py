@@ -48,8 +48,8 @@ def members_ikb(emby=False) -> InlineKeyboardMarkup:
     """
     if emby:
         # method = 'storeall' if not user_buy.stat else 'exchange'
-        return ikb([[('🏪 兑换商店', 'storeall'), ('🗑️ 删除账号', 'delme')],
-                    [('🎬 豆瓣点播', 'https://t.me/micu_sub_bot', 'url'), ('⭕ 重置密码', 'reset')],
+        return ikb([[('🏪 兑换商店', 'storeall'), ('📺 追剧通知', 'https://t.me/micu_emby_fav_bot', 'url')],
+                    [('🎬 豆瓣点播', 'dianbo'), ('⭕ 重置密码', 'reset')],
                     [('♻️ 主界面', 'back_start')]])
     else:
         return ikb(
@@ -65,6 +65,14 @@ re_bindtg_ikb = ikb([[('✨ 绑定TG', 'bindtg'), ('💫 用户主页', 'members
 re_delme_ikb = ikb([[('♻️ 重试', 'delme')], [('🔙 返回', 'members')]])
 re_reset_ikb = ikb([[('♻️ 重试', 'reset')], [('🔙 返回', 'members')]])
 re_exchange_b_ikb = ikb([[('♻️ 重试', 'exchange'), ('❌ 关闭', 'closeit')]])
+re_douban_ikb = ikb([[('♻️ 重试', 'douban-add'), ('❌ 关闭', 'closeit')]])
+
+def dianbo_ikb():
+    return ikb([[(f'✖️ 清除豆瓣绑定', 'dianbo-del'), (f'❌ 取消', 'members')]])
+
+def dianbo_no_ikb():
+    return ikb([[(f'🫛 绑定豆瓣ID', 'dianbo-add'), (f'❌ 取消', 'members')]])
+
 
 
 def store_ikb():
@@ -276,7 +284,7 @@ async def cr_kk_ikb(uid, first):
         text += f"**· 🍉 TG&名称** | [{first}](tg://user?id={uid})\n" \
                 f"**· 🍒 用户のID** | `{uid}`\n" \
                 f"**· 🍓 当前状态** | {lv}\n" \
-                f"**· 🫛 豆瓣のID** | {douban}\n" \
+                f"**· 🫛 豆瓣のID** | `{douban}`\n" \
                 f"**· 🍥 当前{sakura_b}** | {us[1]}\n" \
                 f"**· ⏰ 未用天数** | {us[0]}\n" \
                 f"**· 💠 账号名称** | {name}\n" \
