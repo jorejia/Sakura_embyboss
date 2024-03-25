@@ -598,7 +598,7 @@ async def dianbo_add(_, call):
         return
     await asyncio.gather(callAnswer(call, '🫛 绑定豆瓣ID'), deleteMessage(call))
     msg = await ask_return(call, text='🫛 **【绑定豆瓣ID】**：\n\n'
-                                      f'- 请在120s内对我发送你的豆瓣ID，数字ID或者个性化ID，不能是用户名\n\n退出点 /cancel',
+                                      f'- 请在120s内对我发送你的豆瓣ID，数字ID或者个性化ID，不可以是用户名，如果绑定无效的ID后续将无法同步\n\n退出点 /cancel',
                            button=re_douban_ikb)
     if msg is False:
         return
@@ -606,7 +606,7 @@ async def dianbo_add(_, call):
         await asyncio.gather(msg.delete(), p_start(_, msg))
     else:
         sql_update_emby(Emby.tg == call.from_user.id, douban=msg.text)
-        await sendMessage(call, f'🎊 恭喜你，豆瓣账号 `{msg.text}` 已和 MICU Cloud Media 同步，去添加你喜欢的影视到想看吧~')
+        await sendMessage(call, f'🎊 恭喜你，豆瓣账号 `{msg.text}` 已绑定成功，去添加你喜欢的影视到想看吧~')
 
 
 @bot.on_callback_query(filters.regex('diandel') & user_in_group_on_filter)
