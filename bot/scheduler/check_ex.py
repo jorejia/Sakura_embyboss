@@ -71,13 +71,11 @@ async def check_expired():
                 text = f'【到期检测】\n#id{r.tg} 到期禁用 [{r.name}](tg://user?id={r.tg}) embyapi操作失败'
                 LOGGER.error(text)
             try:
-                send = await bot.send_message(r.tg, text)
-                await send.forward(group[0])
+                await bot.send_message(r.tg, text)
             except FloodWait as f:
                 LOGGER.warning(str(f))
                 await sleep(f.value * 1.2)
-                send = await bot.send_message(r.tg, text)
-                await send.forward(group[0])
+                await bot.send_message(r.tg, text)
             except Exception as e:
                 LOGGER.error(e)
 
