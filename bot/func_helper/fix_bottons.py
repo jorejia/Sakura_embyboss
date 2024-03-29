@@ -262,7 +262,7 @@ async def cr_kk_ikb(uid, first):
         if douban is None:
             douban = '未绑定'
         if name != '无账户信息':
-            ban = "🌟 解除禁用" if lv == "**已禁用**" else '💢 禁用账户'
+            ban = "🌟 解除禁用" if lv == "**到期封存**" else '💢 禁用账户'
             keyboard = [[ban, f'user_ban-{uid}'], ['⚠️ 删除账户', f'closeemby-{uid}']]
             if len(extra_emby_libs) > 0:
                 success, rep = emby.user(embyid=embyid)
