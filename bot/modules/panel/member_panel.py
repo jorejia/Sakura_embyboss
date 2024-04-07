@@ -584,7 +584,7 @@ async def dianbo(_, call):
         douban = '未绑定'
     if e.lv and (e.lv == 'b' or e.lv == 'a'):
         await asyncio.gather(callAnswer(call, '🎬 豆瓣点播'),
-                        editMessage(call, f'**🎬 绑定豆瓣 - 开启点播之旅~**\n\n🫛 当前豆瓣ID | `{douban}`\n📅 我的想看 | **[点击查看](https://movie.douban.com/people/{douban}/wish)**',
+                        editMessage(call, f'**🎬 绑定豆瓣 - 开启点播之旅~\n\n- 🫛 豆瓣のID | `{douban}`\n- 📅 我的想看 | [点击查看](https://movie.douban.com/people/{douban}/wish)**\n',
                                     buttons=dianbo_ikb()))
     else:
         return callAnswer(call, '❌ 仅持有账户可进行豆瓣点播', True)
