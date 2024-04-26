@@ -93,11 +93,13 @@ async def send_red_envelop(_, msg):
         try:
             money = int(msg.command[1])
             members = int(msg.command[2])
+            if members == 1:
+                members = 2
         except (IndexError, KeyError, ValueError):
             return await asyncio.gather(msg.delete(),
                                         sendMessage(msg,
                                                     f'**🧧 发红包：**\n\n'
-                                                    f'`/red` [总{sakura_b}数] [份数] [mode]\n'
+                                                    f'`/red` [总{sakura_b}数] [份数(至少2)] [mode]\n'
                                                     f'[mode] 留空 - 拼手气 | 任意值 - 均分',
                                                     timer=20))
         if not msg.sender_chat:
