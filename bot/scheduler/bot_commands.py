@@ -29,6 +29,7 @@ class BotCommands:
             await client.set_bot_commands(owner_p, scope=BotCommandScopeChat(chat_id=owner))
             # 群组
             for i in group:
+                await client.set_bot_commands(user_p, scope=BotCommandScopeChat(chat_id=i))
                 for admin_id in admins:
                     await client.set_bot_commands(admin_p,
                                                   scope=BotCommandScopeChatMember(chat_id=i, user_id=admin_id))
