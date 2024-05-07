@@ -18,13 +18,13 @@ class BotCommands:
     @staticmethod
     async def set_commands(client):
         try:
-            # await asyncio.gather(client.delete_bot_commands(scope=BotCommandScopeAllGroupChats()),  # 删除所有群聊指令
-            #                      client.delete_bot_commands(scope=BotCommandScopeAllPrivateChats()))  # 删除所有私聊命令
+            await asyncio.gather(client.delete_bot_commands(scope=BotCommandScopeAllGroupChats()),  # 删除所有群聊指令
+                                 client.delete_bot_commands(scope=BotCommandScopeAllPrivateChats()))  # 删除所有私聊命令
             # await asyncio.gather(client.set_bot_commands(user_p, scope=BotCommandScopeAllPrivateChats()),  # 所有私聊命令
             #                      client.set_bot_commands(user_p, scope=BotCommandScopeAllGroupChats()))  # 所有群聊命令
 
             # 私聊
-            await client.set_bot_commands(user_p, scope=BotCommandScopeAllGroupChats())
+            await client.set_bot_commands(user_p, scope=BotCommandScopeAllPrivateChats())
             for admin_id in admins:
                 await client.set_bot_commands(admin_p, scope=BotCommandScopeChat(chat_id=admin_id))
             await client.set_bot_commands(owner_p, scope=BotCommandScopeChat(chat_id=owner))
