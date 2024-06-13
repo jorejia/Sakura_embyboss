@@ -82,8 +82,7 @@ async def create_user(_, call, us, stats):
                                   f'· 用户名称 | `{emby_name}`\n'
                                   f'· 用户密码 | `{pwd1[0]}`\n'
                                   f'· 安全密码 | `{emby_pwd2}`（仅发送一次）\n'
-                                  f'· 到期时间 | `{pwd1[1]}`\n'
-                                  f'· 服务器：{emby_line}\n\n'
+                                  f'· 到期时间 | `{pwd1[1]}`\n\n'
                                   f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**')
                 if stats == 'y':
                     LOGGER.info(f"【创建账户】[开注状态]：{call.from_user.id} - 建立了 {emby_name} ")
@@ -214,8 +213,7 @@ async def change_tg(_, call):
                        f'· 用户密码 | `{pwd[0]}`\n' \
                        f'· 安全密码 | `{e2.pwd2}`（仅发送一次）\n' \
                        f'· 到期时间 | `{e2.ex}`\n\n' \
-                       f'· 当前线路：\n{emby_line}\n\n' \
-                       f'**·在【服务器】按钮 - 查看线路和密码**'
+                       f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
                 await sendMessage(call,
                                   f'⭕#TG改绑 原emby账户 #{emby_name}\n\n'
                                   f'从emby2表绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
@@ -229,8 +227,7 @@ async def change_tg(_, call):
                        f'· 用户密码 | `{e2.pwd}`\n' \
                        f'· 安全密码 | `{pwd[1]}`（仅发送一次）\n' \
                        f'· 到期时间 | `{e2.ex}`\n\n' \
-                       f'· 当前线路：\n{emby_line}\n\n' \
-                       f'**·在【服务器】按钮 - 查看线路和密码**'
+                       f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
                 sql_update_emby(Emby.tg == call.from_user.id, embyid=e2.embyid, name=e2.name, pwd=e2.pwd,
                                 pwd2=emby_pwd, lv=e2.lv, cr=e2.cr, ex=e2.ex)
                 sql_delete_emby2(embyid=e2.embyid)
@@ -253,16 +250,14 @@ async def change_tg(_, call):
                        f'· 用户密码 | `{pwd[0]}`\n' \
                        f'· 安全密码 | `{e.pwd2}`（仅发送一次）\n' \
                        f'· 到期时间 | `{e.ex}`\n\n' \
-                       f'· 当前线路：\n{emby_line}\n\n' \
-                       f'**·在【服务器】按钮 - 查看线路和密码**'
+                       f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
             elif emby_pwd == e.pwd2:
                 text = f'⭕ 账户 {emby_name} 的安全码验证成功！\n\n' \
                        f'· 用户名称 | `{emby_name}`\n' \
                        f'· 用户密码 | `{e.pwd}`\n' \
                        f'· 安全密码 | `{pwd[1]}`（仅发送一次）\n' \
                        f'· 到期时间 | `{e.ex}`\n\n' \
-                       f'· 当前线路：\n{emby_line}\n\n' \
-                       f'**·在【服务器】按钮 - 查看线路和密码**'
+                       f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
 
             f = await bot.get_users(user_ids=e.tg)
             if not f.is_deleted:
@@ -334,8 +329,7 @@ async def bind_tg(_, call):
                            f'· 用户密码 | `{pwd[0]}`\n' \
                            f'· 安全密码 | `{pwd[1]}`（仅发送一次）\n' \
                            f'· 到期时间 | `{ex}`\n\n' \
-                           f'· 当前线路：\n{emby_line}\n\n' \
-                           f'· **在【服务器】按钮 - 查看线路和密码**'
+                           f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
                     sql_update_emby(Emby.tg == call.from_user.id, embyid=embyid, name=emby_name, pwd=emby_pwd,
                                     pwd2=emby_pwd, lv='b', cr=datetime.now(), ex=ex)
                     await editMessage(call, text)

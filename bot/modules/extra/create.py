@@ -45,8 +45,8 @@ async def login_account(_, msg):
         else:
             await send.edit(
                 f'**🎉 成功创建有效期{days}天 #{name}\n\n• 用户名称 | `{name}`\n'
-                f'• 用户密码 | `{pwd1[0]}`\n• 安全密码 | `{1234}`\n'
-                f'• 当前线路 | \n{emby_line}\n\n• 到期时间 | {pwd1[1]}**')
+                f'• 用户密码 | `{pwd1[0]}`\n• 安全密码 | `{1234}`\n\n'
+                f'• 到期时间 | {pwd1[1]}**')
 
             await bot.send_message(owner,
                                    f"®️ 您的管理员 {msg.from_user.first_name} - `{msg.from_user.id}` 已经创建了一个非tg绑定用户 #{name} 有效期**{days}**天")
