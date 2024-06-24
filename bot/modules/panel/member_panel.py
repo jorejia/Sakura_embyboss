@@ -644,8 +644,11 @@ async def do_store_renew(_, call):
             else:
                 new_us = e.iv - iv
                 if new_us < 0:
-                    sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - 5)
-                    return await editMessage(call, f'🫡，西内！兑换时间超出你持有的{e.iv}{sakura_b}，倒扣5。')
+                    sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - 2)
+                    return await editMessage(call, f'🫡，不要太贪心哦！兑换时间超出你持有的{e.iv}{sakura_b}，罚2米币。')
+                if days < 1:
+                    sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - 2)
+                    return await editMessage(call, f'🫡，不要看不起咱！至少兑换1天，罚2米币。')
                 new_ex = e.ex + timedelta(days)
                 sql_update_emby(Emby.tg == call.from_user.id, ex=new_ex, iv=new_us)
                 await asyncio.gather(emby.emby_change_policy(id=e.embyid),
