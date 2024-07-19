@@ -60,7 +60,7 @@ args_dict = {
     "check_ex": {'hour': 0, 'minute': 0, 'id': 'check_expired'},
     "low_activity": {'hour': 8, 'minute': 30, 'id': 'check_low_activity'},
     "backup_db": {'hour': 2, 'minute': 30, 'id': 'backup_db'},
-    "guanying1": {'day': 19, 'hour': 9, 'minute': 59, 'id': 'guanying1'}
+    "guanying1": {'day': 19, 'hour': 10, 'minute': 6, 'id': 'guanying1'}
 }
 
 
