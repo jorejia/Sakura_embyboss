@@ -1,6 +1,7 @@
 """
 兑换注册码exchange
 """
+import requests
 from datetime import timedelta, datetime
 
 from bot import bot, _open, LOGGER, bot_photo, user_buy
@@ -95,6 +96,11 @@ async def rgs_code(_, msg, register_code):
                 await sendMessage(msg,
                                   f'· 🎟️ 注册码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 在服务器未满时可以创建 {us1} 天账户',
                                   send=True)
+                if us1 == 3:
+                    url = "http://127.0.0.1:5000/webhook"
+                    response = requests.get(url)
+
+
             LOGGER.info(
                 f"【注册码】：{msg.from_user.first_name}[{msg.chat.id}] 使用了 {register_code} - 可创建 {us1}天账户")
 
