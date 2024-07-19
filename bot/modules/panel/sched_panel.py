@@ -48,7 +48,7 @@ action_dict = {
     "check_ex": check_expired,
     "low_activity": check_low_activity,
     "backup_db": auto_backup_db,
-    "guanying1": change_allow_code
+    "guanying": change_allow_code
 }
 
 # 字典，对应的操作函数的参数和id
@@ -60,7 +60,7 @@ args_dict = {
     "check_ex": {'hour': 0, 'minute': 0, 'id': 'check_expired'},
     "low_activity": {'hour': 8, 'minute': 30, 'id': 'check_low_activity'},
     "backup_db": {'hour': 2, 'minute': 30, 'id': 'backup_db'},
-    "guanying1": {'day': 19, 'hour': 10, 'minute': 6, 'id': 'guanying1'}
+    "guanying": {'day_of_month': '1,2,3,16,17,18', 'hour': 7, 'minute': 59, 'id': 'guanying'}
 }
 
 
