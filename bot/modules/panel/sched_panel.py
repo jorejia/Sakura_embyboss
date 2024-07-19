@@ -22,6 +22,15 @@ auto_backup_db = DbBackupUtils.auto_backup_db
 user_plays_rank = Uplaysinfo.user_plays_rank
 check_low_activity = Uplaysinfo.check_low_activity
 
+async def change_allow_code():
+    if _open.allow_code:
+        _open.allow_code = False
+        save_config()
+        LOGGER.info(f"【admin】自动 注册码续期 关闭")
+    elif not _open.allow_code:
+        _open.allow_code = True
+        save_config()
+        LOGGER.info(f"【admin】自动 注册码续期 开启")
 
 async def user_day_plays(): await user_plays_rank(1)
 
@@ -51,7 +60,7 @@ args_dict = {
     "check_ex": {'hour': 0, 'minute': 0, 'id': 'check_expired'},
     "low_activity": {'hour': 8, 'minute': 30, 'id': 'check_low_activity'},
     "backup_db": {'hour': 2, 'minute': 30, 'id': 'backup_db'},
-    "guanying1": {'day': 19, 'hour': 9, 'minute': 51, 'id': 'guanying1'}
+    "guanying1": {'day': 19, 'hour': 9, 'minute': 59, 'id': 'guanying1'}
 }
 
 
@@ -73,15 +82,7 @@ async def sched_panel(_, msg):
                       buttons=sched_buttons())
 
 
-async def change_allow_code():
-    if _open.allow_code:
-        _open.allow_code = False
-        save_config()
-        LOGGER.info(f"【admin】自动 注册码续期 关闭")
-    elif not _open.allow_code:
-        _open.allow_code = True
-        save_config()
-        LOGGER.info(f"【admin】自动 注册码续期 开启")
+
 
 
 @bot.on_callback_query(filters.regex('sched') & admins_on_filter)
