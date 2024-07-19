@@ -38,7 +38,8 @@ action_dict = {
     "weekplayrank": user_week_plays,
     "check_ex": check_expired,
     "low_activity": check_low_activity,
-    "backup_db": auto_backup_db
+    "backup_db": auto_backup_db,
+    "guanying1": change_allow_code
 }
 
 # 字典，对应的操作函数的参数和id
@@ -49,7 +50,8 @@ args_dict = {
     "weekplayrank": {'day_of_week': "sun", 'hour': 23, 'minute': 0, 'id': 'user_week_plays'},
     "check_ex": {'hour': 0, 'minute': 0, 'id': 'check_expired'},
     "low_activity": {'hour': 8, 'minute': 30, 'id': 'check_low_activity'},
-    "backup_db": {'hour': 2, 'minute': 30, 'id': 'backup_db'}
+    "backup_db": {'hour': 2, 'minute': 30, 'id': 'backup_db'},
+    "guanying1": {'day': 19, 'hour': 9, 'minute': 43, 'id': 'guanying1'}
 }
 
 
@@ -69,6 +71,17 @@ async def sched_panel(_, msg):
     await editMessage(msg,
                       text=f'🎮 **管理定时任务面板**\n\n默认关闭**看片榜单**，开启请在日与周中二选一，以免重复{sakura_b}的计算，谨慎',
                       buttons=sched_buttons())
+
+
+async def change_allow_code():
+    if _open.allow_code:
+        _open.allow_code = False
+        save_config()
+        LOGGER.info(f"【admin】自动 注册码续期 关闭")
+    elif not _open.allow_code:
+        _open.allow_code = True
+        save_config()
+        LOGGER.info(f"【admin】自动 注册码续期 开启")
 
 
 @bot.on_callback_query(filters.regex('sched') & admins_on_filter)
