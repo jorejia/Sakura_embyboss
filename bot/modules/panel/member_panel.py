@@ -268,14 +268,17 @@ async def change_tg(_, call):
                                          f'⚠️ **你所要换绑的[tg](tg://user?id={e.tg}) - {e.tg}\n\n用户状态正常！无须换绑。**',
                                          buttons=back_members_ikb)
 
-            if sql_delete_emby(tg=call.from_user.id) is True:
-                sql_update_emby(Emby.embyid == e.embyid, tg=call.from_user.id)
-                await sendMessage(call,
-                                  f'⭕#TG改绑 原emby账户 #{emby_name} \n\n已绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
-                                  send=True)
-                LOGGER.info(
-                    f'【TG改绑】 emby账户 {emby_name} 绑定至 {call.from_user.first_name}-{call.from_user.id}')
-                await editMessage(call, text)
+            if sql_delete_emby(tg=call.from_user.id):
+                LOGGER.error(f"【TG改绑】 emby账户{emby_name} 已删除当前tg数据")
+                if sql_update_emby(Emby.embyid == e.embyid, tg=call.from_user.id):
+                    await sendMessage(call,
+                                    f'⭕#TG改绑 原emby账户 #{emby_name} \n\n已绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
+                                    send=True)
+                    LOGGER.info(
+                        f'【TG改绑】 emby账户 {emby_name} 绑定至 {call.from_user.first_name}-{call.from_user.id}')
+                    await editMessage(call, text)
+                else:
+                    LOGGER.error(f"【TG改绑】 emby账户{emby_name} 已替代tg数据")
             else:
                 await editMessage(call, "🍰 **【TG改绑】数据库处理出错，请联系闺蜜（管理）！**", back_members_ikb)
                 LOGGER.error(f"【TG改绑】 emby账户{emby_name} 绑定未知错误。")
