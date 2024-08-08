@@ -33,8 +33,8 @@ from bot.sql_helper import Session
 # 创号函数
 async def create_user(_, call, us, stats):
     same = await editMessage(call,
-                             text='🤖**注意：您已进入注册状态:\n\n• 请在2min内输入 `[用户名][空格][安全码]`\n• 举个例子🌰：`苏苏 1234`**\n\n• 用户名中不限制中/英文/emoji，🚫**特殊字符**'
-                                  '\n• 安全码为敏感操作时附加验证，请填入最熟悉的数字4~6位；退出请点 /cancel')
+                             text='🤖**注意：您已进入注册状态:\n\n• 请在2min内输入 `[用户名][空格][安全码]`\n• 举个例子🌰：`username 1234`**\n\n• 用户名尽量使用英文，用于emby登陆'
+                                  '\n• 安全码用于重置密码等操作，请填入最熟悉的数字4~6位；退出请点 /cancel')
     if same is False:
         return
 
