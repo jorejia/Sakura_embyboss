@@ -193,100 +193,56 @@ async def change_tg(_, call):
 
         pwd = '空（直接回车）', 5210 if emby_pwd == 'None' else emby_pwd, emby_pwd
         e = sql_get_emby(tg=emby_name)
-        if e is None:
-            # 在emby2中，验证安全码 或者密码
-            e2 = sql_get_emby2(name=emby_name)
-            if e2 is None:
-                return await editMessage(call, f'❓ 未查询到bot数据中名为 {emby_name} 的账户，请使用 **绑定TG** 功能。',
-                                         buttons=re_bindtg_ikb)
-            if emby_pwd != e2.pwd2:
-                success, embyid = await emby.authority_account(call.from_user.id, emby_name, emby_pwd)
-                if not success:
-                    return await editMessage(call,
-                                             f'💢 安全码or密码验证错误，请检查输入\n{emby_name} {emby_pwd} 是否正确。',
-                                             buttons=re_changetg_ikb)
-                sql_update_emby(Emby.tg == call.from_user.id, embyid=embyid, name=e2.name, pwd=emby_pwd,
-                                pwd2=e2.pwd2, lv=e2.lv, cr=e2.cr, ex=e2.ex)
-                sql_delete_emby2(embyid=e2.embyid)
-                text = f'⭕ 账户 {emby_name} 的密码验证成功！\n\n' \
-                       f'· 用户名称 | `{emby_name}`\n' \
-                       f'· 用户密码 | `{pwd[0]}`\n' \
-                       f'· 安全密码 | `{e2.pwd2}`（仅发送一次）\n' \
-                       f'· 到期时间 | `{e2.ex}`\n\n' \
-                       f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
-                await sendMessage(call,
-                                  f'⭕#TG改绑 原emby账户 #{emby_name}\n\n'
-                                  f'从emby2表绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
-                                  send=True)
-                LOGGER.info(f'【TG改绑】 emby账户 {emby_name} 绑定至 {call.from_user.first_name}-{call.from_user.id}')
-                await editMessage(call, text)
+        replace_tg=e.tg
 
-            elif emby_pwd == e2.pwd2:
-                text = f'⭕ 账户 {emby_name} 的安全码验证成功！\n\n' \
-                       f'· 用户名称 | `{emby_name}`\n' \
-                       f'· 用户密码 | `{e2.pwd}`\n' \
-                       f'· 安全密码 | `{pwd[1]}`（仅发送一次）\n' \
-                       f'· 到期时间 | `{e2.ex}`\n\n' \
-                       f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
-                sql_update_emby(Emby.tg == call.from_user.id, embyid=e2.embyid, name=e2.name, pwd=e2.pwd,
-                                pwd2=emby_pwd, lv=e2.lv, cr=e2.cr, ex=e2.ex)
-                sql_delete_emby2(embyid=e2.embyid)
-                await sendMessage(call,
-                                  f'⭕#TG改绑 原emby账户 #{emby_name}\n\n'
-                                  f'从emby2表绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
-                                  send=True)
-                LOGGER.info(f'【TG改绑】 emby账户 {emby_name} 绑定至 {call.from_user.first_name}-{call.from_user.id}')
-                await editMessage(call, text)
-
-        else:
-            if emby_pwd != e.pwd2:
-                LOGGER.info(f'emby_pwd: {emby_pwd}, e.pwd2: {e.pwd2}')
-                success, embyid = await emby.authority_account(call.from_user.id, emby_name, emby_pwd)
-                if not success:
-                    return await editMessage(call,
-                                             f'💢 安全码or密码验证错误，请检查输入\n{emby_name} {emby_pwd} 是否正确。',
-                                             buttons=re_changetg_ikb)
-                text = f'⭕ 账户 {emby_name} 的密码验证成功！\n\n' \
-                       f'· 用户名称 | `{emby_name}`\n' \
-                       f'· 用户密码 | `{pwd[0]}`\n' \
-                       f'· 安全密码 | `{e.pwd2}`（仅发送一次）\n' \
-                       f'· 到期时间 | `{e.ex}`\n\n' \
-                       f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
-            elif emby_pwd == e.pwd2:
-                text = f'⭕ 账户 {emby_name} 的安全码验证成功！\n\n' \
-                       f'· 用户名称 | `{emby_name}`\n' \
-                       f'· 用户密码 | `{e.pwd}`\n' \
-                       f'· 安全密码 | `{pwd[1]}`（仅发送一次）\n' \
-                       f'· 到期时间 | `{e.ex}`\n\n' \
-                       f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
-            f = None
-            try:
-                f = await bot.get_users(user_ids=e.tg)
-            except Exception as ex:
-                LOGGER.error(f'【TG改绑】 emby账户{emby_name} 通过tg api获取{e.tg}用户失败，原因：{ex}')
-            if f is not None and not f.is_deleted:
-                await sendMessage(call,
-                                  f'⭕#TG改绑 **用户 [{call.from_user.id}](tg://user?id={call.from_user.id}) 正在试图改绑一个状态正常的[tg用户](tg://user?id={e.tg}) - {e.name}\n\n请管理员检查。**',
-                                  send=True)
+        if emby_pwd != e.pwd2:
+            LOGGER.info(f'emby_pwd: {emby_pwd}, e.pwd2: {e.pwd2}')
+            success, embyid = await emby.authority_account(call.from_user.id, emby_name, emby_pwd)
+            if not success:
                 return await editMessage(call,
-                                         f'⚠️ **你所要换绑的[tg](tg://user?id={e.tg}) - {e.tg}\n\n用户状态正常！无须换绑。**',
-                                         buttons=back_members_ikb)
-            if sql_update_emby(Emby.tg == call.from_user.id, embyid=e.embyid, name=e.name, pwd=e.pwd, pwd2=e.pwd2,
-                               lv=e.lv, cr=e.cr, ex=e.ex, iv=e.iv):
-                await sendMessage(call,
-                                  f'⭕#TG改绑 原emby账户 #{emby_name} \n\n已绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
-                                  send=True)
-                LOGGER.info(
-                    f'【TG改绑】 emby账户 {emby_name} 绑定至 {call.from_user.first_name}-{call.from_user.id}')
-                await editMessage(call, text)
-            else:
-                await editMessage(call, '🍰 **【TG改绑】数据库处理出错，请联系闺蜜（管理）！**', back_members_ikb)
-                LOGGER.error(f"【TG改绑】 emby账户{emby_name} 绑定未知错误。")
-            if sql_delete_emby(tg=e.tg):
-                LOGGER.info(f'【TG改绑】删除原账户 id{e.tg}, Emby:{e.name} 成功...')
-            else:
-                await editMessage(call, "🍰 **⭕#TG改绑 原账户删除错误，请联系闺蜜（管理）！**", back_members_ikb)
-                LOGGER.error(f"【TG改绑】删除原账户 id{e.tg}, Emby:{e.name} 失败...")
+                                            f'💢 安全码or密码验证错误，请检查输入\n{emby_name} {emby_pwd} 是否正确。',
+                                            buttons=re_changetg_ikb)
+            text = f'⭕ 账户 {emby_name} 的密码验证成功！\n\n' \
+                    f'· 用户名称 | `{emby_name}`\n' \
+                    f'· 用户密码 | `{pwd[0]}`\n' \
+                    f'· 安全密码 | `{e.pwd2}`（仅发送一次）\n' \
+                    f'· 到期时间 | `{e.ex}`\n\n' \
+                    f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
+        elif emby_pwd == e.pwd2:
+            text = f'⭕ 账户 {emby_name} 的安全码验证成功！\n\n' \
+                    f'· 用户名称 | `{emby_name}`\n' \
+                    f'· 用户密码 | `{e.pwd}`\n' \
+                    f'· 安全密码 | `{pwd[1]}`（仅发送一次）\n' \
+                    f'· 到期时间 | `{e.ex}`\n\n' \
+                    f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 密码 a1234**'
+        f = None
+        try:
+            f = await bot.get_users(user_ids=e.tg)
+        except Exception as ex:
+            LOGGER.error(f'【TG改绑】 emby账户{emby_name} 通过tg api获取{e.tg}用户失败，原因：{ex}')
+        if f is not None and not f.is_deleted:
+            await sendMessage(call,
+                                f'⭕#TG改绑 **用户 [{call.from_user.id}](tg://user?id={call.from_user.id}) 正在试图改绑一个状态正常的[tg用户](tg://user?id={e.tg}) - {e.name}\n\n请管理员检查。**',
+                                send=True)
+            return await editMessage(call,
+                                        f'⚠️ **你所要换绑的[tg](tg://user?id={e.tg}) - {e.tg}\n\n用户状态正常！无须换绑。**',
+                                        buttons=back_members_ikb)
+        if sql_update_emby(Emby.tg == call.from_user.id, embyid=e.embyid, name=e.name, pwd=e.pwd, pwd2=e.pwd2,
+                            lv=e.lv, cr=e.cr, ex=e.ex, iv=e.iv):
+            await sendMessage(call,
+                                f'⭕#TG改绑 原emby账户 #{emby_name} \n\n已绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
+                                send=True)
+            LOGGER.info(
+                f'【TG改绑】 emby账户 {emby_name} 绑定至 {call.from_user.first_name}-{call.from_user.id}')
+            await editMessage(call, text)
+        else:
+            await editMessage(call, '🍰 **【TG改绑】数据库处理出错，请联系闺蜜（管理）！**', back_members_ikb)
+            LOGGER.error(f"【TG改绑】 emby账户{emby_name} 绑定未知错误。")
+        if sql_delete_emby(tg=replace_tg):
+            LOGGER.info(f'【TG改绑】删除原账户 id{e.tg}, Emby:{e.name} 成功...')
+        else:
+            await editMessage(call, "🍰 **⭕#TG改绑 原账户删除错误，请联系闺蜜（管理）！**", back_members_ikb)
+            LOGGER.error(f"【TG改绑】删除原账户 id{e.tg}, Emby:{e.name} 失败...")
 
 
 @bot.on_callback_query(filters.regex('bindtg') & user_in_group_on_filter)
