@@ -520,15 +520,15 @@ async def do_store(_, call):
     ch_day=e.ex - datetime.now()
     if ch_day.days > 90 or e.lv == 'a':
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
-                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n- 会员可见：兑换时长(按天)\n- 剩余时长大于90天可见：兑换邀请码',
+                         editMessage(call, f'**🏪 兑换商店**\n\n**自动续期** | 需米币数量>450，自动续费一个月\n**兑换时长** | 会员可见，按天手动续期\n**兑换邀请码** | 剩余时长大于90天可见',
                                      buttons=store_vip_ikb()))
     elif e.lv == 'c':
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
-                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n- 会员可见：兑换时长(按天)\n- 剩余时长大于90天可见：兑换邀请码',
+                         editMessage(call, f'**🏪 兑换商店**\n\n**自动续期** | 需米币数量>450，自动续费一个月\n**兑换时长** | 会员可见，按天手动续期\n**兑换邀请码** | 剩余时长大于90天可见',
                                      buttons=store_c_ikb()))
     else:
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
-                         editMessage(call, f'**🏪 兑换商店**\n\n- 自动{sakura_b}续期：按月\n- 会员可见：兑换时长(按天)\n- 剩余时长大于90天可见：兑换邀请码',
+                         editMessage(call, f'**🏪 兑换商店**\n\n**自动续期** | 需米币数量>450，自动续费一个月\n**兑换时长** | 会员可见，按天手动续期\n**兑换邀请码** | 剩余时长大于90天可见',
                                      buttons=store_ikb()))
 
 
