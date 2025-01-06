@@ -42,6 +42,6 @@ async def server(_, call):
     text = f'**▎服务器状态：[点击查看](https://status.micu.hk)**\n\n' \
            f'{server_info}' \
            f'· 🎫 总上限 | **{all_user}**\n· 🎟️ 已注册 | **{emby_user}**\n' \
-           f'· 🎬 在线 | **{online}** 人\n\n' \
+           f'· 🎬 正在播放 | **{online}** 人\n\n' \
            f'**· 🌏 [{(datetime.now(timezone(timedelta(hours=8)))).strftime("%Y-%m-%d %H:%M:%S")}]**'
     await editMessage(call, text, buttons=keyboard)
