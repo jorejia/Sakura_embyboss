@@ -83,6 +83,7 @@ async def create_user(_, call, us, stats):
                                   f'· 用户密码 | `{pwd1[0]}`\n'
                                   f'· 安全密码 | `{emby_pwd2}`（仅发送一次）\n'
                                   f'· 到期时间 | `{pwd1[1]}`\n\n'
+                                  f'· 服务器地址 | 见用户手册，请认真看使用限制，否则连不上\n\n'
                                   f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 手册口令 a1234**')
                 if stats == 'y':
                     LOGGER.info(f"【创建账户】[开注状态]：{call.from_user.id} - 建立了 {emby_name} ")
@@ -206,15 +207,13 @@ async def change_tg(_, call):
                     f'· 用户名称 | `{emby_name}`\n' \
                     f'· 用户密码 | `{pwd[0]}`\n' \
                     f'· 安全密码 | `{e.pwd2}`（仅发送一次）\n' \
-                    f'· 到期时间 | `{e.ex}`\n\n' \
-                    f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 手册口令 a1234**'
+                    f'· 到期时间 | `{e.ex}`'
         elif emby_pwd == e.pwd2:
             text = f'⭕ 账户 {emby_name} 的安全码验证成功！\n\n' \
                     f'· 用户名称 | `{emby_name}`\n' \
                     f'· 用户密码 | `{e.pwd}`\n' \
                     f'· 安全密码 | `{pwd[1]}`（仅发送一次）\n' \
-                    f'· 到期时间 | `{e.ex}`\n\n' \
-                    f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 手册口令 a1234**'
+                    f'· 到期时间 | `{e.ex}`'
         f = None
         try:
             f = await bot.get_users(user_ids=e.tg)
@@ -293,6 +292,7 @@ async def bind_tg(_, call):
                            f'· 用户密码 | `{pwd[0]}`\n' \
                            f'· 安全密码 | `{pwd[1]}`（仅发送一次）\n' \
                            f'· 到期时间 | `{ex}`\n\n' \
+                           f'· 服务器地址 | 见用户手册，请认真看使用限制，否则连不上\n\n' \
                            f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 手册口令 a1234**'
                     sql_update_emby(Emby.tg == call.from_user.id, embyid=embyid, name=emby_name, pwd=emby_pwd,
                                     pwd2=emby_pwd, lv='b', cr=datetime.now(), ex=ex)
