@@ -129,7 +129,7 @@ async def create(_, call):
     elif not _open.stat and int(e.us) <= 0:
         await callAnswer(call, f'🤖 当前没有可注册时长。', True)
     elif not _open.stat and int(e.us) > 0:
-        if _open.tem <= _open.all_user:
+        if _open.tem < _open.all_user:
             send = await callAnswer(call, f'🪙 欢迎注册 MICU Cloud Media，请稍后。', True)
             if send is False:
                 return
