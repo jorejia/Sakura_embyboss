@@ -87,14 +87,14 @@ async def rgs_code(_, msg, register_code):
                                   caption=f'🎊 少年郎，恭喜你，已经收到了 [{first.first_name}](tg://user?id={tg1}) 发送的邀请注册资格\n\n请选择你的选项~',
                                   buttons=register_code_ikb)
                 await sendMessage(msg,
-                                  f'· 🎟️ 邀请码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 尊贵的邀请码闪瞎了眼，可以直接创建 {us1} 天账户咯~',
+                                  f'· 🎟️ 邀请码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 尊贵的邀请码闪瞎了眼，可以直接创建 {us1} 天账户',
                                   send=True)
             else:
                 await sendPhoto(msg, photo=bot_photo,
                                   caption=f'🎊 少年郎，恭喜你，已经成功使用注册码\n\n请选择你的选项~',
                                   buttons=register_code_ikb)
                 await sendMessage(msg,
-                                  f'· 🎟️ 注册码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 在服务器未满时可以创建 {us1} 天账户',
+                                  f'· 🎟️ 注册码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 获得 {us1} 天预注册时长，请在服务器未满时创建账户',
                                   send=True)
                 if us1 == 3:
                     url = "http://127.0.0.1:5000/webhook"
