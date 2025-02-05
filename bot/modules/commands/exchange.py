@@ -91,7 +91,7 @@ async def rgs_code(_, msg, register_code):
                                   send=True)
             else:
                 await sendPhoto(msg, photo=bot_photo,
-                                  caption=f'🎊 少年郎，恭喜你，已经成功使用注册码\n\n请选择你的选项~',
+                                  caption=f'🎊 少年郎，恭喜你，已经成功使用注册码，未注册期间不计时\n\n请选择你的选项~',
                                   buttons=register_code_ikb)
                 await sendMessage(msg,
                                   f'· 🎟️ 注册码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 获得 {us1} 天预注册时长，请在服务器未满时创建账户',
