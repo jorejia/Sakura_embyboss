@@ -652,35 +652,19 @@ async def do_store_invite(_, call):
             return await callAnswer(call,
                                     f'🏪 兑换规则：\n当前兑换邀请码至少需要 {_open.invite_cost} {sakura_b}。勉励',
                                     True)
-        await editMessage(call,
-                          f'🎟️ 请回复创建 **[模式]**：\n\n'
-                          f'  `link` - 邀请链接\n'
-                          f'  `code` - 邀请码\n\n'
-                          f'__取消本次操作，请 /cancel__')
-        content = await callListen(call, 120)
-        if content is False:
-            return await do_store(_, call)
 
-        elif content.text == '/cancel':
-            return await asyncio.gather(content.delete(), do_store(_, call))
-        try:
-            days = 30
-            count = 1
-            method = content.text
-        except (AttributeError, ValueError, IndexError):
-            return await asyncio.gather(sendMessage(call, f'⚠️ 检查输入，格式似乎有误\n{content.text}', timer=10),
-                                        do_store(_, call),
-                                        content.delete())
-        else:
-            sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - _open.invite_cost)
-            links = await cr_link_invite(call.from_user.id, days, count, days, method)
-            if links is None:
-                return await editMessage(call, '⚠️ 数据库插入失败，请检查数据库')
-            links = f"🎯 {bot_name}已为您生成了 **{days}天** 邀请码 {count} 个\n\n" + links
-            chunks = [links[i:i + 4096] for i in range(0, len(links), 4096)]
-            for chunk in chunks:
-                await sendMessage(content, chunk)
-            LOGGER.info(f"【注册码兑换】：{bot_name}已为 {content.from_user.id} 生成了 {count} 个 {days} 天邀请码")
+        days = 30
+        count = 1
+        method = 'code'
+        sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - _open.invite_cost)
+        links = await cr_link_invite(call.from_user.id, days, count, days, method)
+        if links is None:
+            return await editMessage(call, '⚠️ 数据库插入失败，请检查数据库')
+        links = f"🎯 {bot_name}已为您生成了 **{days}天** 邀请码\n\n" + links
+        chunks = [links[i:i + 4096] for i in range(0, len(links), 4096)]
+        for chunk in chunks:
+            await sendMessage(call, chunk)
+        LOGGER.info(f"【注册码兑换】：{bot_name}已为 {content.from_user.id} 生成了 {count} 个 {days} 天邀请码")
 
     else:
         await callAnswer(call, '❌ 管理员未开启此兑换', True)
