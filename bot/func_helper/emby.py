@@ -268,7 +268,7 @@ class Embyservice:
         if _policy.status_code == 200 or 204:
             return True
         return False
-
+  
     async def authority_account(self, tg, username, password=None):
         data = {"Username": username, "Pw": password, }
         if password == 'None':

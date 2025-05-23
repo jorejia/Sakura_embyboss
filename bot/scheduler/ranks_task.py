@@ -43,7 +43,7 @@ async def day_ranks(pin_mode=True):
             user_id, item_id, item_type, name, count, duarion = tuple(tv)
             tmp += str(i + 1) + "." + name + " - " + str(count) + "\n"
         payload += tmp
-    payload = f"**【MICU Cloud Media 播放日榜】**\n\n**📢公告:**\n\n{ranks.announce}\n\n" + payload + "\n#DayRanks" + "  " + date.today().strftime('%Y-%m-%d')
+    payload = f"**【公告&日榜】**\n\n**📢公告:**\n\n{ranks.announce}\n\n" + payload + "\n#DayRanks" + "  " + date.today().strftime('%Y-%m-%d')
     message_info = await bot.send_photo(chat_id=group[0], photo=open(path, "rb"), caption=payload,
                                         parse_mode=enums.ParseMode.MARKDOWN)
     if pin_mode:
@@ -91,8 +91,6 @@ async def week_ranks(pin_mode=True):
         '%Y-%m-%d')
     message_info = await bot.send_photo(chat_id=group[0], photo=open(path, "rb"), caption=payload,
                                         parse_mode=enums.ParseMode.MARKDOWN)
-    if pin_mode:
-        await bot.pin_chat_message(chat_id=message_info.chat.id, message_id=message_info.id, disable_notification=True)
     schedall.week_ranks_message_id = message_info.id
     save_config()
     LOGGER.info("【ranks_task】定时任务 推送周榜完成")

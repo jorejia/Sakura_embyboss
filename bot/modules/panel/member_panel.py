@@ -652,7 +652,6 @@ async def do_store_invite(_, call):
             return await callAnswer(call,
                                     f'🏪 兑换规则：\n当前兑换邀请码至少需要 {_open.invite_cost} {sakura_b}。勉励',
                                     True)
-
         days = 30
         count = 1
         method = 'code'
