@@ -256,36 +256,66 @@ async def s_rank(_, msg):
                          sendPhoto(msg, photo=bot_photo, caption=f'**▎🏆 {sakura_b}风云录**\n\n{t}', buttons=button))
 
 
+# @cache.memoize(ttl=120)
+# async def users_iv_rank():
+#     with Session() as session:
+#         # 查询 Emby 表的所有数据，且>0 的条数
+#         p = session.query(func.count()).filter(Emby.iv > 0).scalar()
+#         if p == 0:
+#             return None, 1
+#         # 创建一个空字典来存储用户的 first_name 和 id
+#         members_dict = await get_users()
+#         i = math.ceil(p / 10)
+#         a = []
+#         b = 1
+#         m = ["🥇", "🥈", "🥉", "🏅"]
+#         # 分析出页数，将检索出 分割p（总数目）的 间隔，将间隔分段，放进【】中返回
+#         while b <= i:
+#             d = (b - 1) * 10
+#             # 查询iv排序，分页查询
+#             result = session.query(Emby).filter(Emby.iv > 0).order_by(Emby.iv.desc()).limit(10).offset(d).all()
+#             e = 1 if d == 0 else d + 1
+#             text = ''
+#             for q in result:
+#                 name = str(members_dict.get(q.tg, q.tg))[:12]
+#                 medal = m[e - 1] if e < 4 else m[3]
+#                 text += f'{medal}**第{cn2an.an2cn(e)}名** | [{name}](google.com?q={q.tg}) の **{q.iv} {sakura_b}**\n'
+#                 e += 1
+#             a.append(text)
+#             b += 1
+#         # a 是内容物，i是页数
+#         return a, i
+
 @cache.memoize(ttl=120)
 async def users_iv_rank():
     with Session() as session:
-        # 查询 Emby 表的所有数据，且>0 的条数
-        p = session.query(func.count()).filter(Emby.iv > 0).scalar()
-        if p == 0:
+        # 查询 Emby 表的 iv > 0 并只获取前100个
+        top100 = (
+            session.query(Emby)
+            .filter(Emby.iv > 0)
+            .order_by(Emby.iv.desc())
+            .limit(100)
+            .all()
+        )
+        if not top100:
             return None, 1
-        # 创建一个空字典来存储用户的 first_name 和 id
         members_dict = await get_users()
-        i = math.ceil(p / 10)
+        total = len(top100)
+        pages = math.ceil(total / 10)
         a = []
-        b = 1
         m = ["🥇", "🥈", "🥉", "🏅"]
-        # 分析出页数，将检索出 分割p（总数目）的 间隔，将间隔分段，放进【】中返回
-        while b <= i:
-            d = (b - 1) * 10
-            # 查询iv排序，分页查询
-            result = session.query(Emby).filter(Emby.iv > 0).order_by(Emby.iv.desc()).limit(10).offset(d).all()
-            e = 1 if d == 0 else d + 1
+        for b in range(pages):
+            page_data = top100[b * 10: (b + 1) * 10]
+            e = b * 10 + 1
             text = ''
-            for q in result:
+            for q in page_data:
                 name = str(members_dict.get(q.tg, q.tg))[:12]
                 medal = m[e - 1] if e < 4 else m[3]
                 text += f'{medal}**第{cn2an.an2cn(e)}名** | [{name}](google.com?q={q.tg}) の **{q.iv} {sakura_b}**\n'
                 e += 1
             a.append(text)
-            b += 1
-        # a 是内容物，i是页数
-        return a, i
-
+        return a, pages
+    
 
 # 检索翻页
 @bot.on_callback_query(filters.regex('users_iv') & user_in_group_on_filter)
