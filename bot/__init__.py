@@ -64,7 +64,7 @@ user_p = [
     BotCommand("start", "开启面板"),
     BotCommand("myinfo", "我的信息"),
     BotCommand("red", "发红包！"),
-    BotCommand("srank", "召唤米币排行榜 [花费5米币]")
+    BotCommand("srank", "召唤米币排行榜 [花费2米币]")
 ]
 
 # 取消 BotCommand("exchange", "[私聊] 使用注册码")
