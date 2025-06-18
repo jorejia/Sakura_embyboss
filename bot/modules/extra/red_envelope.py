@@ -234,57 +234,27 @@ async def s_rank(_, msg):
     await msg.delete()
     if not msg.sender_chat:
         e = sql_get_emby(tg=msg.from_user.id)
-        if not e or e.iv < 5:
+        if not e or e.iv < 2:
             await asyncio.gather(msg.delete(),
                                  msg.chat.restrict_member(msg.from_user.id, ChatPermissions(),
                                                           datetime.now() + timedelta(minutes=1)),
                                  sendMessage(msg, f'[{msg.from_user.first_name}]({msg.from_user.id}) '
-                                                  f'未私聊过bot或不足支付手续费5{sakura_b}，禁言一分钟。', timer=60))
+                                                  f'未私聊过bot或不足支付手续费2{sakura_b}，禁言一分钟。', timer=60))
             return
         else:
-            sql_update_emby(Emby.tg == msg.from_user.id, iv=e.iv - 5)
+            sql_update_emby(Emby.tg == msg.from_user.id, iv=e.iv - 2)
             sender = msg.from_user.id
     elif msg.sender_chat.id == msg.chat.id:
         sender = msg.chat.id
     else:
         return
-    reply = await msg.reply(f"已扣除手续5{sakura_b}, 请稍等......加载中")
+    reply = await msg.reply(f"已扣除手续2{sakura_b}, 请稍等......加载中")
     text, i = await users_iv_rank()
     t = '❌ 数据库操作失败' if not text else text[0]
     button = await users_iv_button(i, 1, sender)
     await asyncio.gather(reply.delete(),
                          sendPhoto(msg, photo=bot_photo, caption=f'**▎🏆 {sakura_b}风云录**\n\n{t}', buttons=button))
 
-
-# @cache.memoize(ttl=120)
-# async def users_iv_rank():
-#     with Session() as session:
-#         # 查询 Emby 表的所有数据，且>0 的条数
-#         p = session.query(func.count()).filter(Emby.iv > 0).scalar()
-#         if p == 0:
-#             return None, 1
-#         # 创建一个空字典来存储用户的 first_name 和 id
-#         members_dict = await get_users()
-#         i = math.ceil(p / 10)
-#         a = []
-#         b = 1
-#         m = ["🥇", "🥈", "🥉", "🏅"]
-#         # 分析出页数，将检索出 分割p（总数目）的 间隔，将间隔分段，放进【】中返回
-#         while b <= i:
-#             d = (b - 1) * 10
-#             # 查询iv排序，分页查询
-#             result = session.query(Emby).filter(Emby.iv > 0).order_by(Emby.iv.desc()).limit(10).offset(d).all()
-#             e = 1 if d == 0 else d + 1
-#             text = ''
-#             for q in result:
-#                 name = str(members_dict.get(q.tg, q.tg))[:12]
-#                 medal = m[e - 1] if e < 4 else m[3]
-#                 text += f'{medal}**第{cn2an.an2cn(e)}名** | [{name}](google.com?q={q.tg}) の **{q.iv} {sakura_b}**\n'
-#                 e += 1
-#             a.append(text)
-#             b += 1
-#         # a 是内容物，i是页数
-#         return a, i
 
 @cache.memoize(ttl=120)
 async def users_iv_rank():
