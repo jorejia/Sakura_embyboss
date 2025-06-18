@@ -289,32 +289,39 @@ async def s_rank(_, msg):
 @cache.memoize(ttl=120)
 async def users_iv_rank():
     with Session() as session:
-        # 查询 Emby 表的 iv > 0 并只获取前100个
-        top100 = (
-            session.query(Emby)
-            .filter(Emby.iv > 0)
-            .order_by(Emby.iv.desc())
-            .limit(100)
-            .all()
-        )
-        if not top100:
+        # 查询 Emby 表的所有数据，且 iv > 0 的条数
+        p = session.query(func.count()).filter(Emby.iv > 0).scalar()
+        if p == 0:
             return None, 1
+
+        # 获取用户信息字典
         members_dict = await get_users()
-        total = len(top100)
-        pages = math.ceil(total / 10)
-        a = []
-        m = ["🥇", "🥈", "🥉", "🏅"]
-        for b in range(pages):
-            page_data = top100[b * 10: (b + 1) * 10]
-            e = b * 10 + 1
+
+        # 总页数（每页10条），最多只处理10页
+        total_pages = min(math.ceil(p / 10), 10)
+
+        results_list = []
+        page = 1
+        medals = ["🥇", "🥈", "🥉", "🏅"]
+
+        while page <= total_pages:
+            offset = (page - 1) * 10
+
+            # 查询当前页的数据（按 iv 降序排序）
+            result = session.query(Emby).filter(Emby.iv > 0).order_by(Emby.iv.desc()).limit(10).offset(offset).all()
+
+            rank_index = 1 if offset == 0 else offset + 1
             text = ''
-            for q in page_data:
+            for q in result:
                 name = str(members_dict.get(q.tg, q.tg))[:12]
-                medal = m[e - 1] if e < 4 else m[3]
-                text += f'{medal}**第{cn2an.an2cn(e)}名** | [{name}](google.com?q={q.tg}) の **{q.iv} {sakura_b}**\n'
-                e += 1
-            a.append(text)
-        return a, pages
+                medal = medals[rank_index - 1] if rank_index < 4 else medals[3]
+                text += f'{medal}**第{cn2an.an2cn(rank_index)}名** | [{name}](google.com?q={q.tg}) の **{q.iv} {sakura_b}**\n'
+                rank_index += 1
+
+            results_list.append(text)
+            page += 1
+
+        return results_list, total_pages
     
 
 # 检索翻页
