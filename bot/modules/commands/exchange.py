@@ -47,17 +47,17 @@ async def rgs_code(_, msg, register_code):
             if ex_new > ex:
                 ex_new = ex_new + timedelta(days=us1)
                 await emby.emby_change_policy(id=embyid, method=False)
-                if lv == 'c' or lv == 'a':
+                if lv == 'c':
                     session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new, Emby.lv: 'b'})
                 else:
                     session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
                 await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
-                                       f'__已解封账户并延长到期时间至(以当前时间计)__\n到期时间：{ex_new.strftime("%Y-%m-%d %H:%M:%S")}')
+                                       f'请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')
             elif ex_new < ex:
                 ex_new = data.ex + timedelta(days=us1)
                 session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
                 await sendMessage(msg,
-                                  f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n到期时间：{ex_new}__')
+                                  f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')
             session.commit()
             new_code = register_code[:-7] + "░" * 7
             LOGGER.info(f"【续费】：{msg.from_user.first_name}[{msg.chat.id}] 使用了 {register_code}，到期时间：{ex_new}")
