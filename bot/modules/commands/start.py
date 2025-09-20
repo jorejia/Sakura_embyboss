@@ -32,7 +32,7 @@ async def my_info(_, msg):
     if msg.sender_chat:
         return
     text, keyboard = await cr_kk_ikb(uid=msg.from_user.id, first=msg.from_user.first_name)
-    await sendMessage(msg, text, timer=60)
+    await sendMessage(msg, text)
 
 
 @bot.on_message(filters.command('count', prefixes) & user_in_group_on_filter & filters.private)

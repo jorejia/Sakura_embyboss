@@ -2,6 +2,7 @@
 兑换注册码exchange
 """
 import requests
+import time
 from datetime import timedelta, datetime
 
 from bot import bot, _open, LOGGER, bot_photo, user_buy
@@ -45,10 +46,17 @@ async def rgs_code(_, msg, register_code):
             # 此处需要写一个判断 now和ex的大小比较。进行日期加减。
             ex_new = datetime.now()
             if ex_new > ex:
-                ex_new = ex_new + timedelta(days=us1)
-                await emby.emby_change_policy(id=embyid, method=False)
+                ex_new = ex_new + timedelta(days=us1)               
                 if lv == 'c':
                     session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new, Emby.lv: 'b'})
+                    time.sleep(1)
+                    datac = sql_get_emby(tg=msg.from_user.id)
+                    lvc = datac.lv
+                    if lvc == 'c':
+                        await sendMessage(msg,
+                                        f'续费失败，请看用户手册第18条申诉')
+                    else:
+                        await emby.emby_change_policy(id=embyid, method=False)                   
                 else:
                     session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
                 await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
