@@ -49,6 +49,7 @@ async def rgs_code(_, msg, register_code):
                 ex_new = ex_new + timedelta(days=us1)               
                 if lv == 'c':
                     session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new, Emby.lv: 'b'})
+                    session.commit()
                     time.sleep(1)
                     datac = sql_get_emby(tg=msg.from_user.id)
                     lvc = datac.lv
