@@ -56,11 +56,9 @@ async def rgs_code(_, msg, register_code):
                         await sendMessage(msg,
                                         f'续费失败，请看用户手册第18条申诉')
                     else:
-                        await emby.emby_change_policy(id=embyid, method=False)                   
-                else:
-                    session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
-                await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
-                                       f'请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')
+                        await emby.emby_change_policy(id=embyid, method=False)
+                        await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
+                                            f'请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')                   
             elif ex_new < ex:
                 ex_new = data.ex + timedelta(days=us1)
                 session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
