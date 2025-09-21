@@ -45,22 +45,21 @@ async def rgs_code(_, msg, register_code):
             first = await bot.get_chat(tg1)
             # 此处需要写一个判断 now和ex的大小比较。进行日期加减。
             ex_new = datetime.now()
-            if ex_new > ex:
+            if lv == 'c':
                 ex_new = ex_new + timedelta(days=us1)               
-                if lv == 'c':
-                    session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new, Emby.lv: 'b'})
-                    session.commit()
-                    time.sleep(1)
-                    datac = sql_get_emby(tg=msg.from_user.id)
-                    lvc = datac.lv
-                    if lvc == 'c':
-                        await sendMessage(msg,
-                                        f'续费失败，请看用户手册第18条申诉')
-                    else:
-                        await emby.emby_change_policy(id=embyid, method=False)
-                        await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
-                                            f'请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')                   
-            elif ex_new < ex or lv == 'b':
+                session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new, Emby.lv: 'b'})
+                session.commit()
+                time.sleep(1)
+                datac = sql_get_emby(tg=msg.from_user.id)
+                lvc = datac.lv
+                if lvc == 'c':
+                    await sendMessage(msg,
+                                    f'续费失败，请看用户手册第18条申诉')
+                else:
+                    await emby.emby_change_policy(id=embyid, method=False)
+                    await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
+                                        f'请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')                   
+            elif lv == 'b':
                 ex_new = data.ex + timedelta(days=us1)
                 session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
                 session.commit()
