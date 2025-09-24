@@ -26,7 +26,7 @@ async def ui_g_command(_, msg):
 
 
 # 查看自己的信息
-@bot.on_message(filters.command('myinfo', prefixes) & user_in_group_on_filter)
+@bot.on_message(filters.command('myinfo', prefixes) & filters.private)
 async def my_info(_, msg):
     await msg.delete()
     if msg.sender_chat:
