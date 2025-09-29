@@ -256,7 +256,7 @@ async def cr_kk_ikb(uid, first):
     keyboard = []
     data = await members_info(uid)
     if data is None:
-        text += f'**· 🆔 TG** ：[{first}](tg://user?id={uid}) [`{uid}`]\n数据库中没有此ID。ta 还没有私聊过我'
+        text += f'**· 🆔 TG** ：[{first}](tg://user?id={uid}) [`{uid}`]\n请点击 /start 唤起菜单'
     else:
         name, lv, ex, us, embyid, pwd2, douban = data
         if douban is None:
