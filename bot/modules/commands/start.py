@@ -17,7 +17,7 @@ from bot import bot, prefixes, group, bot_photo, ranks, _open
 
 
 # 反命令提示
-@bot.on_message((filters.command('start', prefixes) | filters.command('count', prefixes)) & filters.chat(group))
+@bot.on_message((filters.command('start', prefixes) | filters.command('count', prefixes) | filters.command('myinfo', prefixes)) & filters.chat(group))
 async def ui_g_command(_, msg):
     await asyncio.gather(deleteMessage(msg),
                          sendMessage(msg,
