@@ -39,7 +39,7 @@ async def server(_, call):
         online = emby.get_current_playing_count()
     except:
         online = 'Emby服务器断连 ·0'
-    text = f'**▎服务器状态：[点击查看](https://status.micu.hk)**\n\n' \
+    text = f'**▎服务器地址见用户手册\n\n' \
            f'{server_info}' \
            f'· 🎫 总上限 | **{all_user}**\n· 🎟️ 已注册 | **{emby_user}**\n' \
            f'· 🎬 正在播放 | **{online}** 人\n\n' \
