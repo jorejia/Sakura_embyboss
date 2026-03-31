@@ -49,8 +49,17 @@ def sql_delete_emby(tg=None, embyid=None, name=None):
     """
     with Session() as session:
         try:
-            # 构造一个or_条件，只要有一个参数不为None就可以匹配
-            condition = or_(Emby.tg == tg, Emby.embyid == embyid, Emby.name == name)
+            # 仅使用显式传入的参数构造查询条件，避免 None 变成 IS NULL 误删占位记录
+            conditions = []
+            if tg is not None:
+                conditions.append(Emby.tg == tg)
+            if embyid is not None:
+                conditions.append(Emby.embyid == embyid)
+            if name is not None:
+                conditions.append(Emby.name == name)
+            if not conditions:
+                return None
+            condition = or_(*conditions)
             # 用filter来过滤，注意要加括号
             emby = session.query(Emby).filter(condition).with_for_update().first()
             if emby:
