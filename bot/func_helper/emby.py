@@ -6,9 +6,10 @@ emby的api操作方法
 from datetime import datetime, timedelta, timezone
 
 import requests as r
-from bot import emby_url, emby_api, _open, save_config, emby_block, schedall, extra_emby_libs, LOGGER, another_line
+from bot import sidecar_url, emby_url, emby_api, _open, save_config, emby_block, schedall, LOGGER, another_line
 from bot.sql_helper.sql_emby import sql_update_emby, Emby
 from bot.sql_helper.sql_emby2 import sql_add_emby2, sql_delete_emby2
+from bot.sql_helper.sql_favorites import sql_delete_favorites_by_embyid
 from bot.func_helper.utils import pwd_create, convert_runtime, cache
 
 
@@ -17,39 +18,57 @@ def create_policy(admin=False, disable=False, limit: int = 2, block: list = None
     :param admin: bool 是否开启管理员
     :param disable: bool 是否禁用
     :param limit: int 同时播放流的默认值，修改2 -> 3 any都可以
-    :param block: list 默认将 播放列表 屏蔽
+    :param block: list 仅在媒体库屏蔽场景附加 BlockedMediaFolders
     :return: plocy 用户策略
     """
-    if block is None:
-        block = ['播放列表'] + extra_emby_libs
-    # else:
-    #     block = block.copy()
-    #     block.extend(['播放列表'])
     policy = {
         "IsAdministrator": admin,
         "IsHidden": True,
         "IsHiddenRemotely": True,
+        "IsHiddenFromUnusedDevices": True,
         "IsDisabled": disable,
+        "LockedOutDate": 0,
+        "AllowTagOrRating": False,
+        "BlockedTags": [],
+        "IsTagBlockingModeInclusive": False,
+        "IncludeTags": [],
+        "EnableUserPreferenceAccess": False,
+        "AccessSchedules": [],
+        "BlockUnratedItems": [],
         "EnableRemoteControlOfOtherUsers": False,
         "EnableSharedDeviceControl": False,
         "EnableRemoteAccess": True,
         "EnableLiveTvManagement": False,
-        "EnableLiveTvAccess": True,
+        "EnableLiveTvAccess": False,
         "EnableMediaPlayback": True,
         "EnableAudioPlaybackTranscoding": False,
         "EnableVideoPlaybackTranscoding": False,
         "EnablePlaybackRemuxing": False,
         "EnableContentDeletion": False,
+        "RestrictedFeatures": ["notifications"],
+        "EnableContentDeletionFromFolders": [],
         "EnableContentDownloading": False,
         "EnableSubtitleDownloading": False,
         "EnableSubtitleManagement": False,
         "EnableSyncTranscoding": False,
         "EnableMediaConversion": False,
+        "EnabledChannels": [],
+        "EnableAllChannels": True,
+        "EnabledFolders": [],
+        "EnableAllFolders": True,
+        "InvalidLoginAttemptCount": 0,
+        "EnablePublicSharing": False,
+        "RemoteClientBitrateLimit": 0,
+        "AuthenticationProviderId": "Emby.Server.Implementations.Library.DefaultAuthenticationProvider",
+        "ExcludedSubFolders": [],
+        "SimultaneousStreamLimit": str(limit),
+        "EnabledDevices": [],
         "EnableAllDevices": True,
-        "SimultaneousStreamLimit": limit,
-        "BlockedMediaFolders": block,
-        "AllowCameraUpload": False  # 新版api 控制开关相机上传
+        "AllowCameraUpload": False,
+        "AllowSharingPersonalItems": False
     }
+    if block is not None:
+        policy["BlockedMediaFolders"] = block
     return policy
 
 
@@ -96,6 +115,24 @@ class Embyservice:
             'X-Emby-Client-Version': '1.0.0',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.82'
         }
+
+    def _internal_parental_rating_url(self):
+        return f"{sidecar_url.rstrip('/')}/internal/parental-rating"
+
+    def _internal_use_line_url(self):
+        return f"{sidecar_url.rstrip('/')}/internal/use-line"
+
+    def _internal_user_last_activity_url(self):
+        return f"{sidecar_url.rstrip('/')}/internal/user-last-activity"
+
+    def _internal_session_count_url(self):
+        return f"{sidecar_url.rstrip('/')}/internal/session-count"
+
+    def _internal_play_count_ranks_url(self):
+        return f"{sidecar_url.rstrip('/')}/internal/play-count-ranks"
+
+    def _internal_item_other_name_url(self):
+        return f"{sidecar_url.rstrip('/')}/internal/item-other-name"
 
     async def emby_create(self, tg: int, name, pwd2, us: int, stats):
         """
@@ -158,6 +195,8 @@ class Embyservice:
         """
         res = r.delete(f'{self.url}/emby/Users/{id}', headers=self.headers)
         if res.status_code == 200 or 204:
+            if not sql_delete_favorites_by_embyid(id):
+                LOGGER.warning(f"删除 Emby 账号 {id} 后清理收藏记录失败，不影响主流程")
             if stats is None:
                 if sql_update_emby(Emby.embyid == id, embyid=None, name=None, pwd=None, pwd2=None, lv='d', cr=None,
                                    ex=None):
@@ -211,6 +250,7 @@ class Embyservice:
         :return:bool
         """
         if stats == 0:
+            block = list(block or [])
             policy = create_policy(False, False, block=block)
         else:
             policy = create_policy(False, False)
@@ -222,37 +262,20 @@ class Embyservice:
             return True
         return False
 
-    @cache.memoize(ttl=120)
+    @cache.memoize(ttl=10)
     def get_current_playing_count(self) -> int:
         """
         最近播放数量
         :return: int NowPlayingItem
         """
-        response = r.get(f"{self.url}/emby/Sessions", headers=self.headers)
-        sessions = response.json()
-        # print(sessions)
-        count = 0
-        for session in sessions:
-            try:
-                if session["NowPlayingItem"]:
-                    count += 1
-            except KeyError:
-                pass
-        try:
-            response1 = r.get(f"{another_line[0]}/emby/Sessions?api_key={another_line[1]}")
-            sessions1 = response1.json()
-            # print(sessions1)
-        except Exception as e:
-            # print(e)
-            return count
-        else:
-            for session1 in sessions1:
-                try:
-                    if session1["NowPlayingItem"]:
-                        count += 1
-                except KeyError:
-                    pass
-        return count
+        response = r.get(
+            self._internal_session_count_url(),
+            headers={"accept": "application/json"},
+            timeout=3
+        )
+        response.raise_for_status()
+        payload = response.json()
+        return int(payload.get("ActiveSessionCount", 0))
 
     async def emby_change_policy(self, id=id, admin=False, method=False):
         """
@@ -288,9 +311,8 @@ class Embyservice:
         if method == 'sp':
             sql += "SELECT UserId, SUM(PlayDuration - PauseDuration) AS WatchTime FROM PlaybackActivity "
             sql += f"WHERE DateCreated >= '{start_time}' AND DateCreated < '{end_time}' GROUP BY UserId ORDER BY WatchTime DESC"
-        elif user_id != 'None':
-            sql += "SELECT MAX(DateCreated) AS LastLogin,SUM(PlayDuration - PauseDuration) / 60 AS WatchTime FROM PlaybackActivity "
-            sql += f"WHERE UserId = '{user_id}' AND DateCreated >= '{start_time}' AND DateCreated < '{end_time}' GROUP BY UserId"
+        else:
+            return None
         data = {"CustomQueryString": sql, "ReplaceUserId": True}  # user_name
         # print(sql)
         resp = r.post(_url, headers=self.headers, json=data, timeout=30)
@@ -428,6 +450,77 @@ class Embyservice:
         except Exception as e:
             return False, {'error': e}
 
+    async def get_sidecar_play_count_ranks(self, days=7, limit=10):
+        try:
+            response = r.get(
+                self._internal_play_count_ranks_url(),
+                headers={"accept": "application/json"},
+                params={"days": days, "limit": limit},
+                timeout=10
+            )
+            if response.status_code not in (200, 204):
+                return False, {'error': "🤕Sidecar 服务器连接失败!"}
+            payload = response.json()
+            movies = [
+                ('', item.get("ItemId"), item.get("ItemType"), item.get("Name"), item.get("PlayCount"), item.get("TotalDuration", 0))
+                for item in payload.get("Movies", [])
+            ]
+            tvs = [
+                ('', item.get("ItemId"), item.get("ItemType"), item.get("Name"), item.get("PlayCount"), item.get("TotalDuration", 0))
+                for item in payload.get("Series", [])
+            ]
+            return True, {"Movies": movies, "Series": tvs}
+        except Exception as e:
+            return False, {'error': e}
+
+    async def get_sidecar_user_last_activity(self, user_id):
+        try:
+            response = r.get(
+                self._internal_user_last_activity_url(),
+                headers={"accept": "application/json"},
+                params={"userid": user_id},
+                timeout=5
+            )
+            if response.status_code not in (200, 204):
+                return False, {'error': "🤕Sidecar 服务器连接失败!"}
+            return True, response.json()
+        except Exception as e:
+            return False, {'error': e}
+
+    async def get_item_other_name(self, item_id):
+        try:
+            response = r.get(
+                self._internal_item_other_name_url(),
+                headers={"accept": "application/json"},
+                params={"item_id": item_id},
+                timeout=5
+            )
+            if response.status_code == 404:
+                return False, {'error': "未找到此 item_id"}
+            if response.status_code not in (200, 204):
+                return False, {'error': f"HTTP {response.status_code}"}
+            return True, response.json()
+        except Exception as e:
+            LOGGER.error(f"获取别名失败: {e}")
+            return False, {'error': e}
+
+    async def set_item_other_name(self, item_id, other_name):
+        try:
+            response = r.get(
+                self._internal_item_other_name_url(),
+                headers={"accept": "application/json"},
+                params={"item_id": item_id, "other_name": other_name},
+                timeout=5
+            )
+            if response.status_code == 404:
+                return False, {'error': "未找到此 item_id"}
+            if response.status_code not in (200, 204):
+                return False, {'error': f"HTTP {response.status_code}"}
+            return True, response.json()
+        except Exception as e:
+            LOGGER.error(f"设置别名失败: {e}")
+            return False, {'error': e}
+
     # 找出 指定用户播放过的不同ip，设备
     async def get_emby_userip(self, user_id):
         sql = f"SELECT DISTINCT RemoteAddress,DeviceName FROM PlaybackActivity " \
@@ -518,6 +611,70 @@ class Embyservice:
         except Exception as e:
             LOGGER.error(f"连接Items出错：" + str(e))
             return []
+
+    async def get_parental_rating(self, user_id):
+        try:
+            resp = r.get(
+                self._internal_parental_rating_url(),
+                headers=self.headers,
+                params={"userid": user_id},
+                timeout=5
+            )
+            if resp.status_code not in (200, 204):
+                return False, f"HTTP {resp.status_code}"
+            data = resp.json()
+            return True, int(data.get("MaxParentalRatingValue", 10))
+        except Exception as e:
+            LOGGER.error(f"获取家长控制状态失败: {e}")
+            return False, str(e)
+
+    async def set_parental_rating(self, user_id, value: int):
+        try:
+            resp = r.get(
+                self._internal_parental_rating_url(),
+                headers=self.headers,
+                params={"userid": user_id, "value": value},
+                timeout=5
+            )
+            if resp.status_code not in (200, 204):
+                return False, f"HTTP {resp.status_code}"
+            data = resp.json()
+            return True, int(data.get("MaxParentalRatingValue", value))
+        except Exception as e:
+            LOGGER.error(f"设置家长控制状态失败: {e}")
+            return False, str(e)
+
+    async def get_use_line(self, user_id):
+        try:
+            resp = r.get(
+                self._internal_use_line_url(),
+                headers=self.headers,
+                params={"userid": user_id},
+                timeout=5
+            )
+            if resp.status_code not in (200, 204):
+                return False, f"HTTP {resp.status_code}"
+            data = resp.json()
+            return True, int(data.get("UseLine", 1))
+        except Exception as e:
+            LOGGER.error(f"获取线路状态失败: {e}")
+            return False, str(e)
+
+    async def set_use_line(self, user_id, value: int):
+        try:
+            resp = r.get(
+                self._internal_use_line_url(),
+                headers=self.headers,
+                params={"userid": user_id, "value": value},
+                timeout=5
+            )
+            if resp.status_code not in (200, 204):
+                return False, f"HTTP {resp.status_code}"
+            data = resp.json()
+            return True, int(data.get("UseLine", value))
+        except Exception as e:
+            LOGGER.error(f"设置线路状态失败: {e}")
+            return False, str(e)
 
     # async def get_remote_image_by_id(self, item_id: str, image_type: str):
     #     """

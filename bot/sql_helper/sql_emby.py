@@ -2,7 +2,7 @@
 基本的sql操作
 """
 from bot.sql_helper import Base, Session, engine
-from sqlalchemy import Column, BigInteger, String, DateTime, Integer, case
+from sqlalchemy import Column, BigInteger, String, DateTime, Integer, case, inspect, text
 from sqlalchemy import func
 from sqlalchemy import or_
 
@@ -25,9 +25,30 @@ class Emby(Base):
     us = Column(Integer, default=0)
     iv = Column(Integer, default=0)
     ch = Column(DateTime, nullable=True)
+    notify_enabled = Column(Integer, default=0)
 
 
 Emby.__table__.create(bind=engine, checkfirst=True)
+
+
+def _ensure_emby_columns():
+    """为历史库补齐新增字段，避免老部署升级后缺列。"""
+    inspector = inspect(engine)
+    columns = {column["name"] for column in inspector.get_columns("emby")}
+    statements = []
+
+    if "notify_enabled" not in columns:
+        statements.append(
+            "ALTER TABLE emby ADD COLUMN notify_enabled INT NOT NULL DEFAULT 0"
+        )
+
+    if statements:
+        with engine.begin() as conn:
+            for statement in statements:
+                conn.execute(text(statement))
+
+
+_ensure_emby_columns()
 
 
 def sql_add_emby(tg: int):

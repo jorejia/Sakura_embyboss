@@ -71,12 +71,12 @@ class RanksDraw:
             # 封面图像获取
             if self.backdrop:
                 resize = (242, 160)
-                xy = (103 + 302 * index, 140)
+                xy = (408 + 302 * index, 444)
                 prisuccess, data = await emby.backdrop(item_id)
                 if not prisuccess:
                     prisuccess, data = await emby.primary(item_id)
                     resize = (110, 160)
-                    xy = (169 + 302 * index, 140)
+                    xy = (474 + 302 * index, 444)
             else:
                 prisuccess, data = await emby.primary(item_id)
                 resize = (144, 210)
@@ -100,7 +100,7 @@ class RanksDraw:
             if not prisuccess:
                 # 如果没有封面图，使用name来代替
                 if self.backdrop:
-                    draw_text_psd_style(text, (123 + 302 * index, 140), name, temp_font, 126)
+                    draw_text_psd_style(text, (428 + 302 * index, 444), name, temp_font, 126)
                 else:
                     draw_text_psd_style(text, (601, 162 + 230 * index), name, temp_font, 126)
             # 绘制 播放次数、影片名称
@@ -117,25 +117,26 @@ class RanksDraw:
             user_id, item_id, item_type, name, count, duarion = tuple(i)
             # 图片获取，剧集主封面获取
             # 获取剧ID
-            success, data = await emby.items(user_id, item_id)
-            if success:
-                item_id = data["SeriesId"]
-            else:
-                logging.error(f'【ranks_draw】获取剧集ID失败 {item_id} {name},根据名称开始搜索。')
-                # ID错误时根据剧名搜索得到正确的ID
-                ret_media = await emby.get_movies(title=name, start=0, limit=1)
-                if ret_media:
-                    item_id = ret_media[0]['item_id']
-                    logging.info(f'{name} 已更新使用正确ID：{item_id}')
+            if item_type not in ('Series', 6, '6'):
+                success, data = await emby.items(user_id, item_id)
+                if success:
+                    item_id = data["SeriesId"]
+                else:
+                    logging.error(f'【ranks_draw】获取剧集ID失败 {item_id} {name},根据名称开始搜索。')
+                    # ID错误时根据剧名搜索得到正确的ID
+                    ret_media = await emby.get_movies(title=name, start=0, limit=1)
+                    if ret_media:
+                        item_id = ret_media[0]['item_id']
+                        logging.info(f'{name} 已更新使用正确ID：{item_id}')
             # 封面图像获取
             if self.backdrop:
                 prisuccess, data = await emby.backdrop(item_id)
                 resize = (242, 160)
-                xy = (408 + 302 * index, 444)
+                xy = (103 + 302 * index, 140)
                 if not prisuccess:
                     prisuccess, data = await emby.primary(item_id)
                     resize = (110, 160)
-                    xy = (474 + 302 * index, 444)
+                    xy = (169 + 302 * index, 140)
             else:
                 prisuccess, data = await emby.primary(item_id)
                 resize = (144, 210)
@@ -158,7 +159,7 @@ class RanksDraw:
             if not prisuccess:
                 # 如果没有封面图，使用name来代替
                 if self.backdrop:
-                    draw_text_psd_style(text, (428 + 302 * index, 444), name, temp_font, 126)
+                    draw_text_psd_style(text, (123 + 302 * index, 140), name, temp_font, 126)
                 else:
                     draw_text_psd_style(text, (770, 990 - 232 * index), name, temp_font, 126)
             # 绘制 播放次数、影片名称
@@ -210,7 +211,7 @@ class RanksDraw:
             cover = Image.open(os.path.join('bot', "ranks_helper", "resource", "test.png"))
             if self.backdrop:
                 cover = cover.resize((242, 160))
-                self.bg.paste(cover, (103 + 302 * index, 140))
+                self.bg.paste(cover, (408 + 302 * index, 444))
             else:
                 cover = cover.resize((144, 210))
                 self.bg.paste(cover, (601, 162 + 230 * index))
@@ -234,7 +235,7 @@ class RanksDraw:
             cover = Image.open(os.path.join('bot', "ranks_helper", "resource", "test1.png"))
             if self.backdrop:
                 cover = cover.resize((242, 160))
-                self.bg.paste(cover, (408 + 302 * index, 444))
+                self.bg.paste(cover, (103 + 302 * index, 140))
             else:
                 cover = cover.resize((144, 210))
                 self.bg.paste(cover, (770, 985 - 232 * index))

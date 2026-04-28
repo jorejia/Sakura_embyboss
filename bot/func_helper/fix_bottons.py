@@ -6,7 +6,7 @@ from bot import chanel, main_group, bot_name, extra_emby_libs, tz_id, tz_ad, tz_
     schedall
 from bot.func_helper import nezha_res
 from bot.func_helper.emby import emby
-from bot.func_helper.utils import judge_admins, members_info
+from bot.func_helper.utils import judge_admins, members_info, convert_to_beijing_time
 
 cache = Cache()
 
@@ -47,13 +47,13 @@ def members_ikb(emby=False) -> InlineKeyboardMarkup:
     :return:
     """
     if emby:
-        # method = 'storeall' if not user_buy.stat else 'exchange'
-        return ikb([[('🏪 兑换商店', 'storeall'), ('📺 追剧通知', 'https://t.me/micu_emby_fav_bot', 'url')],
+        return ikb([[('🏪 兑换商店', 'storeall'), ('📺 追剧推送', 'notify_menu')],
+                    [('🛡️ 家长控制', 'parental_menu'), ('🛣️ 线路选择', 'line_menu')],
                     [('🎬 豆瓣点播', 'dianbo'), ('⭕ 重置密码', 'reset')],
                     [('♻️ 主界面', 'back_start')]])
     else:
         return ikb(
-            [[('👑 创建账户', 'create')], [('⭕ 换绑TG', 'changetg'), ('🔍 绑定TG', 'bindtg')],
+            [[('👑 注册Emby账号', 'create')], [('⭕ 从被封禁TG换绑', 'changetg')],
              [('♻️ 主界面', 'back_start')]])
 
 
@@ -72,6 +72,58 @@ def dianbo_ikb():
 
 def dianbo_no_ikb():
     return ikb([[], [('❌ 取消', 'members')]])
+
+
+def notify_menu_ikb(enabled: bool):
+    action_text = '关闭追剧推送' if enabled else '开启追剧推送'
+    return ikb([
+        [(f'📺 {action_text}', 'notify_toggle')],
+        [('🔙 返回', 'members')]
+    ])
+
+
+def parental_menu_ikb(current_value: int):
+    def label(value: int, text: str) -> str:
+        prefix = '✅ ' if current_value == value else ''
+        return f'{prefix}{text}'
+
+    return ikb([
+        [[label(1, '0+ 全龄'), 'parental_set:1'], [label(4, '7+ 少儿'), 'parental_set:4']],
+        [[label(7, '12+ 指导'), 'parental_set:7'], [label(8, '16+ 青少'), 'parental_set:8']],
+        [[label(10, '18+ 全部'), 'parental_set:10']],
+        [('🔙 返回', 'members')]
+    ])
+
+
+def parental_rating_label(value: int) -> str:
+    mapping = {
+        1: '0+ 全龄',
+        4: '7+ 少儿',
+        7: '12+ 指导',
+        8: '16+ 青少',
+        9: '17+ 限制',
+        10: '18+ 成人'
+    }
+    return mapping.get(value, f'未知({value})')
+
+
+def line_menu_ikb(current_value: int):
+    def label(value: int, text: str) -> str:
+        prefix = '✅ ' if current_value == value else ''
+        return f'{prefix}{text}'
+
+    return ikb([
+        [[label(1, '直连一线'), 'line_set:1'], [label(2, '直连二线'), 'line_set:2']],
+        [('🔙 返回', 'members')]
+    ])
+
+
+def line_label(value: int) -> str:
+    mapping = {
+        1: '直连一线',
+        2: '直连二线'
+    }
+    return mapping.get(value, f'未知({value})')
 
 
 
@@ -100,6 +152,15 @@ def emby_block_ikb(embyid) -> InlineKeyboardMarkup:
 user_emby_block_ikb = ikb([[('✅ 已隐藏', 'members')]])
 user_emby_unblock_ikb = ikb([[('❎ 已显示', 'members')]])
 
+
+def checkin_menu_ikb(options=None) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboard(row_width=4)
+    options = options or []
+    if options:
+        keyboard.row(*[InlineButton(str(option), f'checkin_answer:{option}') for option in options])
+    keyboard.row(InlineButton('♻️ 主界面', 'back_start'))
+    return keyboard
+
 """server ↓"""
 
 
@@ -123,8 +184,8 @@ async def cr_page_server():
 
 """admins ↓"""
 
-gm_ikb_content = ikb([[('⭕ 注册状态', 'open-menu'), ('🎟️ 生成注册', 'cr_link')],
-                      [('💊 查询注册', 'ch_link'), ('🏬 兑换设置', 'set_renew')],
+gm_ikb_content = ikb([[('⭕ 注册状态', 'open-menu'), ('🎁 生成活动码', 'cr_activity'), ('🎟️ 生成注册', 'cr_link')],
+                      [('💊 查询注册', 'ch_link'), ('🏷️ 别名设置', 'alias_setting'), ('🏬 兑换设置', 'set_renew')],
                       [('🌏 定时', 'schedall'), ('🕹️ 主界面', 'back_start'), ('其他 🪟', 'back_config')]])
 
 
@@ -143,6 +204,11 @@ def ch_link_ikb(ls: list) -> InlineKeyboardMarkup:
     lines = array_chunk(ls, 2)
     lines.append([["💫 回到首页", "manage"]])
     return ikb(lines)
+
+
+def alias_setting_ikb(item_id) -> InlineKeyboardMarkup:
+    return ikb([[('🧹 清空别名', f'alias_clear-{item_id}'), ('✏️ 修改别名', f'alias_modify-{item_id}')],
+                [('🔙 返回', 'manage')]])
 
 
 def date_ikb(i) -> InlineKeyboardMarkup:
@@ -275,14 +341,16 @@ async def cr_kk_ikb(uid, first):
                     libs, embyextralib = ['✖️', f'embyextralib_unblock-{uid}'] if set(extra_emby_libs).issubset(
                         set(currentblock)) else ['✔️', f'embyextralib_block-{uid}']
                     keyboard.append([f'{libs} 额外媒体库', embyextralib])
+            last_activity_text = "未知"
             try:
-                rst = await emby.emby_cust_commit(user_id=embyid, days=30)
-                last_time = rst[0][0]
-                toltime = rst[0][1]
-                text1 = f"**· 🔋 上次活动** | {last_time.split('.')[0]}\n" \
-                        f"**· 📅 过去30天** | {toltime} min"
+                success, activity = await emby.get_sidecar_user_last_activity(embyid)
+                if success:
+                    last_activity = activity.get("LastActivityDate")
+                    if last_activity:
+                        last_activity_text = convert_to_beijing_time(last_activity).strftime("%Y-%m-%d %H:%M:%S")
+                text1 = f"**· 🔋 上次活动** | {last_activity_text}\n"
             except (TypeError, IndexError, ValueError):
-                text1 = f"**· 📅 过去30天未有记录**"
+                text1 = f"**· 🔋 上次活动** | {last_activity_text}\n"
         else:
             keyboard.append(['✨ 赠送资格', f'gift-{uid}'])
         text += f"**· 🍉 TG&名称** | [{first}](tg://user?id={uid})\n" \

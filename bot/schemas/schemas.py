@@ -98,6 +98,18 @@ class Proxy(BaseModel):
     password: str = ""
 
 
+class API(BaseModel):
+    status: bool = False
+    http_url: Optional[str] = "0.0.0.0"
+    http_port: Optional[int] = 8838
+    allow_origins: Optional[List[Union[str, int]]] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.allow_origins is None:
+            self.allow_origins = ["*"]
+
+
 class Config(BaseModel):
     bot_name: str
     bot_token: str
@@ -115,6 +127,7 @@ class Config(BaseModel):
     money: str
     emby_api: str
     emby_url: str
+    sidecar_url: str
     emby_block: Optional[List[str]] = []
     emby_line: str
     extra_emby_libs: Optional[List[str]] = []
@@ -136,6 +149,7 @@ class Config(BaseModel):
     # w_anti_chanel_ids: Optional[List[str | int]] = []
     w_anti_chanel_ids: Optional[List[Union[str, int]]] = []
     proxy: Optional[Proxy] = Proxy()
+    api: API = API()
 
     def __init__(self, **data):
         super().__init__(**data)

@@ -92,6 +92,16 @@ class Uplaysinfo:
         if not success:
             return await bot.send_message(chat_id=group[0], text='⭕ 调用emby api失败')
         msg = ''
+
+        async def load_last_activity(embyid):
+            success_activity, activity = await emby.get_sidecar_user_last_activity(embyid)
+            if not success_activity:
+                return "None"
+            last_activity = activity.get("LastActivityDate")
+            if not last_activity:
+                return "None"
+            return convert_to_beijing_time(last_activity)
+
         # print(users)
         for user in users:
             # 数据库先找
@@ -101,22 +111,17 @@ class Uplaysinfo:
 
             elif e.lv == 'c':
                 # print(e.tg)
-                try:
-                    ac_date = convert_to_beijing_time(user["LastActivityDate"])
-                except KeyError:
-                    ac_date = "None"
-                finally:
-                    if ac_date == "None" or ac_date + timedelta(days=15) < now:
-                        if await emby.emby_del(id=e.embyid):
-                            msg += f'**🔋活跃检测** - [{e.name}](tg://user?id={e.tg})\n#id{e.tg} 禁用后未解禁，已执行删除。\n\n'
-                            LOGGER.info(f"【活跃检测】- 删除账户 {user['Name']} #id{e.tg}")
-                        else:
-                            msg += f'**🔋活跃检测** - [{e.name}](tg://user?id={e.tg})\n#id{e.tg} 禁用后未解禁，执行删除失败。\n\n'
-                            LOGGER.info(f"【活跃检测】- 删除账户失败 {user['Name']} #id{e.tg}")
+                ac_date = await load_last_activity(user["Id"])
+                if ac_date == "None" or ac_date + timedelta(days=15) < now:
+                    if await emby.emby_del(id=e.embyid):
+                        msg += f'**🔋活跃检测** - [{e.name}](tg://user?id={e.tg})\n#id{e.tg} 禁用后未解禁，已执行删除。\n\n'
+                        LOGGER.info(f"【活跃检测】- 删除账户 {user['Name']} #id{e.tg}")
+                    else:
+                        msg += f'**🔋活跃检测** - [{e.name}](tg://user?id={e.tg})\n#id{e.tg} 禁用后未解禁，执行删除失败。\n\n'
+                        LOGGER.info(f"【活跃检测】- 删除账户失败 {user['Name']} #id{e.tg}")
             elif e.lv == 'b':
-                try:
-                    ac_date = convert_to_beijing_time(user["LastActivityDate"])
-                    # print(e.name, ac_date, now)
+                ac_date = await load_last_activity(user["Id"])
+                if ac_date != "None":
                     if ac_date + timedelta(days=21) < now:
                         if await emby.emby_change_policy(id=user["Id"], method=True):
                             sql_update_emby(Emby.embyid == user["Id"], lv='c')
@@ -125,7 +130,7 @@ class Uplaysinfo:
                         else:
                             msg += f"**🎂活跃检测** - [{user['Name']}](tg://user?id={e.tg})\n21天未活跃，禁用失败啦！检查emby连通性\n\n"
                             LOGGER.info(f"【活跃检测】- 禁用账户 {user['Name']} #id{e.tg}：禁用失败啦！检查emby连通性")
-                except KeyError:
+                else:
                     if await emby.emby_change_policy(id=user["Id"], method=True):
                         sql_update_emby(Emby.embyid == user["Id"], lv='c')
                         msg += f"**🔋活跃检测** - [{user['Name']}](tg://user?id={e.tg})\n#id{e.tg} 注册后未活跃，禁用\n\n"

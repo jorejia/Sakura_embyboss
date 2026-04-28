@@ -21,7 +21,8 @@ from bot.func_helper.filters import user_in_group_on_filter
 from bot.func_helper.utils import members_info, tem_alluser, cr_link_one, cr_link_invite
 from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create_ikb, del_me_ikb, re_delme_ikb, \
     re_reset_ikb, re_changetg_ikb, emby_block_ikb, user_emby_block_ikb, user_emby_unblock_ikb, re_exchange_b_ikb, \
-    dianbo_ikb, re_douban_ikb, store_ikb, store_vip_ikb, store_c_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, user_query_page
+    dianbo_ikb, re_douban_ikb, store_ikb, store_vip_ikb, store_c_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, \
+    user_query_page, notify_menu_ikb, parental_menu_ikb, parental_rating_label, line_menu_ikb, line_label
 from bot.func_helper.msg_utils import callAnswer, editMessage, callListen, sendMessage, ask_return, deleteMessage
 from bot.modules.commands import p_start
 from bot.modules.commands.exchange import rgs_code
@@ -127,7 +128,7 @@ async def create(_, call):
     if e.embyid:
         await callAnswer(call, '💦 你已经有账户啦！请勿重复注册。', True)
     elif not _open.stat and int(e.us) <= 0:
-        await callAnswer(call, f'🤖 当前没有可注册时长。', True)
+        await callAnswer(call, f'🤖 当前没有可注册时长，请先使用注册码', True)
     elif not _open.stat and int(e.us) > 0:
         if _open.tem < _open.all_user:
             send = await callAnswer(call, f'🪙 欢迎注册 MICU Cloud Media，请稍后。', True)
@@ -141,7 +142,7 @@ async def create(_, call):
                 if send is False:
                     return
                 else:
-                    sql_update_emby(Emby.tg == call, invite = 'n')
+                    sql_update_emby(Emby.tg == call.from_user.id, invite='n')
                     await create_user(_, call, us=e.us, stats='n')
             else:
                 send = await callAnswer(call, f'🤖 当前服务器人数已达上限，无法注册，请耐心等待。', True)
@@ -530,6 +531,159 @@ async def do_store(_, call):
         await asyncio.gather(callAnswer(call, '✔️ 欢迎进入兑换商店'),
                          editMessage(call, f'**🏪 兑换商店**\n\n**自动续期** | 需米币数量>450，自动续费一个月\n**兑换时长** | 会员可见，可按天手动续期\n**兑换邀请码** | 剩余时长大于90天可见',
                                      buttons=store_ikb()))
+
+
+def build_notify_menu_text(enabled: bool) -> str:
+    status = '已开启' if enabled else '已关闭'
+    return (
+        f'**📺 追剧推送**\n\n'
+        f'**当前状态**：{status}\n\n'
+        f'说明：\n'
+        f'- 开启后，新加入的收藏/取消收藏会收到私聊消息\n'
+        f'- 已收藏的剧集更新时会收到推送提醒\n'
+    )
+
+
+def build_parental_menu_text(current_value: int) -> str:
+    return (
+        f'**🛡️ 家长控制**\n\n'
+        f'根据内容分级限制电影和剧集的可见范围，'
+        f'分级适用于未成年人家长管理，本服没有成人内容\n\n'
+        f'**当前状态**：{parental_rating_label(current_value)}\n\n'
+        f'说明：\n'
+        f'- `0+ 全龄` 范围最小仅保留儿童、全年龄内容\n'
+        f'- `7+ / 12+ / 16+ / 18+` 逐步放宽可见范围\n'
+        f'- `18+ 全部` 默认此项显示库内所有内容'
+    )
+
+
+def build_line_menu_text(current_value: int) -> str:
+    return (
+        f'**🛣️  **\n\n'
+        f'本功能只作为直连线路视频流的实时切换，不适用于海外线，'
+        f'线路地址见用户手册\n\n'
+        f'**当前线路**：{line_label(current_value)}\n\n'
+        f'说明：\n'
+        f'- 切换不会中断当前播放的视频\n'
+        f'- 切换后会立即作用于下一次播放的视频\n'
+        f'- 不通的地区、运营商、时间段两条线的体验均不一样，建议随时切换使用更适合的线路'
+    )
+
+
+@bot.on_callback_query(filters.regex('notify_menu') & user_in_group_on_filter)
+async def notify_menu(_, call):
+    e = sql_get_emby(tg=call.from_user.id)
+    if e is None:
+        return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start 录入', True)
+    if not e.embyid:
+        return await callAnswer(call, '❌ 需要先拥有 Emby 账号后才能设置追剧推送', True)
+
+    enabled = bool(e.notify_enabled)
+    await asyncio.gather(
+        callAnswer(call, '📺 追剧推送'),
+        editMessage(call, build_notify_menu_text(enabled), buttons=notify_menu_ikb(enabled))
+    )
+
+
+@bot.on_callback_query(filters.regex('notify_toggle') & user_in_group_on_filter)
+async def notify_toggle(_, call):
+    e = sql_get_emby(tg=call.from_user.id)
+    if e is None:
+        return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start 录入', True)
+    if not e.embyid:
+        return await callAnswer(call, '❌ 需要先拥有 Emby 账号后才能设置追剧推送', True)
+
+    enabled = not bool(e.notify_enabled)
+    if not sql_update_emby(Emby.tg == call.from_user.id, notify_enabled=int(enabled)):
+        return await callAnswer(call, '❌ 状态更新失败，请稍后重试', True)
+
+    await asyncio.gather(
+        callAnswer(call, f'已{"开启" if enabled else "关闭"}追剧推送', True),
+        editMessage(call, build_notify_menu_text(enabled), buttons=notify_menu_ikb(enabled))
+    )
+    LOGGER.info(f'【追剧推送】用户 {call.from_user.id} 已调整为 {"开启" if enabled else "关闭"}')
+
+
+@bot.on_callback_query(filters.regex('parental_menu') & user_in_group_on_filter)
+async def parental_menu(_, call):
+    e = sql_get_emby(tg=call.from_user.id)
+    if e is None:
+        return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start 录入', True)
+    if not e.embyid:
+        return await callAnswer(call, '❌ 需要先拥有 Emby 账号后才能设置家长控制', True)
+
+    ok, value = await emby.get_parental_rating(e.embyid)
+    if not ok:
+        return await callAnswer(call, f'❌ 获取当前家长控制状态失败：{value}', True)
+
+    await asyncio.gather(
+        callAnswer(call, '🛡️ 家长控制'),
+        editMessage(call, build_parental_menu_text(value), buttons=parental_menu_ikb(value))
+    )
+
+
+@bot.on_callback_query(filters.regex(r'parental_set:\d+') & user_in_group_on_filter)
+async def parental_set(_, call):
+    e = sql_get_emby(tg=call.from_user.id)
+    if e is None:
+        return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start 录入', True)
+    if not e.embyid:
+        return await callAnswer(call, '❌ 需要先拥有 Emby 账号后才能设置家长控制', True)
+
+    try:
+        value = int(call.data.split(':', 1)[1])
+    except (IndexError, ValueError):
+        return await callAnswer(call, '❌ 档位参数错误', True)
+
+    ok, result = await emby.set_parental_rating(e.embyid, value)
+    if not ok:
+        return await callAnswer(call, f'❌ 设置失败：{result}', True)
+
+    await asyncio.gather(
+        callAnswer(call, f'已切换到 {parental_rating_label(result)}', True),
+        editMessage(call, build_parental_menu_text(result), buttons=parental_menu_ikb(result))
+    )
+
+
+@bot.on_callback_query(filters.regex('line_menu') & user_in_group_on_filter)
+async def line_menu(_, call):
+    e = sql_get_emby(tg=call.from_user.id)
+    if e is None:
+        return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start 录入', True)
+    if not e.embyid:
+        return await callAnswer(call, '❌ 需要先拥有 Emby 账号后才能设置线路', True)
+
+    ok, value = await emby.get_use_line(e.embyid)
+    if not ok:
+        return await callAnswer(call, f'❌ 获取当前线路失败：{value}', True)
+
+    await asyncio.gather(
+        callAnswer(call, '🛣️ 线路选择'),
+        editMessage(call, build_line_menu_text(value), buttons=line_menu_ikb(value))
+    )
+
+
+@bot.on_callback_query(filters.regex(r'line_set:\d+') & user_in_group_on_filter)
+async def line_set(_, call):
+    e = sql_get_emby(tg=call.from_user.id)
+    if e is None:
+        return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start 录入', True)
+    if not e.embyid:
+        return await callAnswer(call, '❌ 需要先拥有 Emby 账号后才能设置线路', True)
+
+    try:
+        value = int(call.data.split(':', 1)[1])
+    except (IndexError, ValueError):
+        return await callAnswer(call, '❌ 线路参数错误', True)
+
+    ok, result = await emby.set_use_line(e.embyid, value)
+    if not ok:
+        return await callAnswer(call, f'❌ 设置失败：{result}', True)
+
+    await asyncio.gather(
+        callAnswer(call, f'已切换到 {line_label(result)}', True),
+        editMessage(call, build_line_menu_text(result), buttons=line_menu_ikb(result))
+    )
 
 
 # 豆瓣点播

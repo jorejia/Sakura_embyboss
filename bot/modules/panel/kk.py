@@ -53,6 +53,34 @@ async def user_info(_, msg):
         await sendMessage(msg, text=text, buttons=keyboard)
 
 
+@bot.on_message(filters.command('dd', prefixes) & admins_on_filter)
+async def douban_info(_, msg):
+    await deleteMessage(msg)
+    if msg.reply_to_message is None:
+        try:
+            uid = int(msg.command[1])
+            first = await bot.get_chat(uid)
+        except (IndexError, KeyError, ValueError):
+            return await sendMessage(msg, '🔔 **查询豆瓣ID:**\n\n用法：`/dd` [tg_id]\n或者对某人回复', timer=15)
+        except BadRequest:
+            return await sendMessage(msg, f'{msg.command[1]} - 🎂抱歉，此id未登记bot，或者id错误', timer=15)
+        except AttributeError:
+            return
+    else:
+        try:
+            uid = msg.reply_to_message.from_user.id
+            first = msg.reply_to_message.from_user
+        except AttributeError:
+            return await sendMessage(msg, '⛔ 这条消息没有可用的用户信息，请直接输入 tg_id', timer=15)
+
+    e = sql_get_emby(tg=uid)
+    if e is None:
+        return await sendMessage(msg, f'⛔ [{first.first_name}](tg://user?id={uid}) 未登记 bot 数据', timer=15)
+    if not e.douban:
+        return await sendMessage(msg, f'⛔ [{first.first_name}](tg://user?id={uid}) 当前未绑定豆瓣ID', timer=15)
+    await sendMessage(msg, f'`{e.douban}`', timer=15)
+
+
 # 封禁或者解除
 @bot.on_callback_query(filters.regex('user_ban'))
 async def kk_user_ban(_, call):

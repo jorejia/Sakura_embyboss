@@ -11,13 +11,11 @@ import math
 from datetime import datetime, timedelta
 from pyrogram import filters
 from pyrogram.types import ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
-from sqlalchemy import func
-
-from bot import bot, prefixes, sakura_b, bot_photo
+from bot import bot, prefixes, sakura_b, bot_photo, LOGGER
 from bot.func_helper.filters import user_in_group_on_filter
 from bot.func_helper.fix_bottons import users_iv_button
 from bot.func_helper.msg_utils import sendPhoto, sendMessage, callAnswer, editMessage
-from bot.func_helper.utils import pwd_create, judge_admins, get_users, cache
+from bot.func_helper.utils import pwd_create, judge_admins, cache
 from bot.sql_helper import Session
 from bot.sql_helper.sql_emby import Emby, sql_get_emby, sql_update_emby
 from bot.ranks_helper.ranks_draw import RanksDraw
@@ -253,34 +251,49 @@ async def s_rank(_, msg):
     t = '❌ 数据库操作失败' if not text else text[0]
     button = await users_iv_button(i, 1, sender)
     await asyncio.gather(reply.delete(),
-                         sendPhoto(msg, photo=bot_photo, caption=f'**▎🏆 {sakura_b}风云录**\n\n{t}', buttons=button))
+                         sendPhoto(msg, photo=bot_photo, caption=f'**▎🏆 {sakura_b}风云录**\n\n{t}', buttons=button,
+                                   timer=300))
+
+
+async def resolve_rank_user_names(user_ids):
+    unique_ids = []
+    seen = set()
+    for user_id in user_ids:
+        if not user_id or user_id in seen:
+            continue
+        seen.add(user_id)
+        unique_ids.append(user_id)
+
+    if not unique_ids:
+        return {}
+
+    try:
+        users = await bot.get_users(unique_ids)
+        if not isinstance(users, list):
+            users = [users]
+        return {user.id: user.first_name for user in users if getattr(user, "id", None)}
+    except Exception as e:
+        LOGGER.warning(f'【srank】批量获取 Telegram 用户名失败: {e}')
+        return {}
 
 
 @cache.memoize(ttl=120)
 async def users_iv_rank():
     with Session() as session:
-        # 查询 Emby 表的所有数据，且 iv > 0 的条数
-        p = session.query(func.count()).filter(Emby.iv > 0).scalar()
-        if p == 0:
+        top_rows = session.query(Emby.tg, Emby.iv).filter(Emby.iv > 0).order_by(Emby.iv.desc()).limit(100).all()
+        if not top_rows:
             return None, 1
 
-        # 获取用户信息字典
-        members_dict = await get_users()
-
-        # 总页数（每页10条），最多只处理10页
-        total_pages = min(math.ceil(p / 10), 10)
+        members_dict = await resolve_rank_user_names([row.tg for row in top_rows])
+        total_pages = min(math.ceil(len(top_rows) / 10), 10)
 
         results_list = []
-        page = 1
         medals = ["🥇", "🥈", "🥉", "🏅"]
 
-        while page <= total_pages:
+        for page in range(1, total_pages + 1):
             offset = (page - 1) * 10
-
-            # 查询当前页的数据（按 iv 降序排序）
-            result = session.query(Emby).filter(Emby.iv > 0).order_by(Emby.iv.desc()).limit(10).offset(offset).all()
-
-            rank_index = 1 if offset == 0 else offset + 1
+            result = top_rows[offset:offset + 10]
+            rank_index = offset + 1
             text = ''
             for q in result:
                 name = str(members_dict.get(q.tg, q.tg))[:12]
@@ -289,7 +302,6 @@ async def users_iv_rank():
                 rank_index += 1
 
             results_list.append(text)
-            page += 1
 
         return results_list, total_pages
     

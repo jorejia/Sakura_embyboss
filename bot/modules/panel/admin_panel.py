@@ -8,15 +8,16 @@ from pyrogram import filters
 from pyrogram.errors import BadRequest
 
 from bot import bot, _open, save_config, bot_photo, LOGGER, bot_name, admins, owner
+from bot.func_helper.emby import emby
 from bot.func_helper.filters import admins_on_filter
 from bot.schemas import ExDate
 from bot.sql_helper.sql_code import sql_count_code, sql_count_p_code
 from bot.sql_helper.sql_emby import sql_count_emby
 from bot.func_helper.fix_bottons import gm_ikb_content, open_menu_ikb, gog_rester_ikb, back_open_menu_ikb, \
     back_free_ikb, \
-    re_cr_link_ikb, close_it_ikb, ch_link_ikb, date_ikb, cr_paginate, cr_renew_ikb
+    re_cr_link_ikb, close_it_ikb, ch_link_ikb, date_ikb, cr_paginate, cr_renew_ikb, alias_setting_ikb
 from bot.func_helper.msg_utils import callAnswer, editMessage, sendPhoto, callListen, deleteMessage, sendMessage
-from bot.func_helper.utils import open_check, cr_link_one
+from bot.func_helper.utils import open_check, cr_link_one, cr_link_activity
 
 
 @bot.on_callback_query(filters.regex('manage') & admins_on_filter)
@@ -32,6 +33,28 @@ async def gm_ikb(_, call):
               f'· 🎫 总注册限制 | **{all_user}**\n· 🎟️ 已注册人数 | **{emby}** • WL **{white}**\n· 🤖 bot使用人数 | {tg}'
 
     await editMessage(call, gm_text, buttons=gm_ikb_content)
+
+
+def _alias_display(value):
+    value = str(value or '').strip()
+    if not value:
+        return '未设置'
+    return value.replace('`', 'ˋ')
+
+
+def _alias_panel_text(item_id, payload):
+    return f'🏷️ **别名设置**\n\n' \
+           f'· item_id | `{item_id}`\n' \
+           f'· 主名 | `{_alias_display(payload.get("Name"))}`\n' \
+           f'· 别名 | `{_alias_display(payload.get("OtherName"))}`'
+
+
+async def _show_alias_panel(call, item_id):
+    ok, payload = await emby.get_item_other_name(item_id)
+    if not ok:
+        error = payload.get('error', payload) if isinstance(payload, dict) else payload
+        return await editMessage(call, f'⚠️ 获取别名失败：{error}', buttons=gm_ikb_content)
+    return await editMessage(call, _alias_panel_text(item_id, payload), buttons=alias_setting_ikb(item_id))
 
 
 # 开关注册
@@ -232,6 +255,122 @@ async def cr_link(_, call):
             await sendMessage(content, chunk, buttons=close_it_ikb)
         await editMessage(call, f'📂 {bot_name}已为 您 生成了 {count} 个 {days} 天邀请码', buttons=re_cr_link_ikb)
         LOGGER.info(f"【admin】：{bot_name}已为 {content.from_user.id} 生成了 {count} 个 {days} 天邀请码")
+
+
+@bot.on_callback_query(filters.regex('cr_activity') & admins_on_filter)
+async def cr_activity(_, call):
+    await callAnswer(call, '✔️ 创建活动码')
+    send = await editMessage(call,
+                             f'🎁 请回复创建 [天数] [数量] [模式]\n\n'
+                             f'**天数**：月30，季90，半年180，年365\n'
+                             f'**模式**： link -深链接 | code -码\n'
+                             f'**示例**：`1 20 link` 记作 20条 1天活动码链接\n'
+                             f'__取消本次操作，请 /cancel__')
+    if send is False:
+        return
+
+    content = await callListen(call, 120, buttons=re_cr_link_ikb)
+    if content is False:
+        return
+    elif content.text == '/cancel':
+        await content.delete()
+        return await editMessage(call, '⭕ 您已经取消操作了。', buttons=re_cr_link_ikb)
+    try:
+        await content.delete()
+        times, count, method = content.text.split()
+        count = int(count)
+        days = int(times)
+        if method != 'code' and method != 'link':
+            return editMessage(call, '⭕ 输入的method参数有误', buttons=re_cr_link_ikb)
+    except (ValueError, IndexError):
+        return await editMessage(call, '⚠️ 检查输入，有误。', buttons=re_cr_link_ikb)
+    else:
+        links = await cr_link_activity(call.from_user.id, times, count, days, method)
+        if links is None:
+            return await editMessage(call, '⚠️ 数据库插入失败，请检查数据库。', buttons=re_cr_link_ikb)
+        links = f"🎯 {bot_name}已为您生成了 **{days}天** 活动码 {count} 个\n\n" + links
+        chunks = [links[i:i + 4096] for i in range(0, len(links), 4096)]
+        for chunk in chunks:
+            await sendMessage(content, chunk, buttons=close_it_ikb)
+        await editMessage(call, f'📂 {bot_name}已为 您 生成了 {count} 个 {days} 天活动码', buttons=re_cr_link_ikb)
+        LOGGER.info(f"【admin】：{bot_name}已为 {content.from_user.id} 生成了 {count} 个 {days} 天活动码")
+
+
+@bot.on_callback_query(filters.regex('alias_setting') & admins_on_filter)
+async def alias_setting(_, call):
+    await callAnswer(call, '🏷️ 别名设置')
+    send = await editMessage(call,
+                             '🏷️ **别名设置**\n\n'
+                             '- 请在 120s 内发送需要设置别名的 `item_id`\n'
+                             '- 退出请发送 /cancel')
+    if send is False:
+        return
+
+    content = await callListen(call, 120, buttons=gm_ikb_content)
+    if content is False:
+        return
+    elif content.text == '/cancel':
+        await content.delete()
+        return await gm_ikb(_, call)
+
+    try:
+        await content.delete()
+        item_id = int(content.text.strip())
+        if item_id <= 0:
+            raise ValueError
+    except (ValueError, AttributeError):
+        return await editMessage(call, '⚠️ item_id 需要是正整数。', buttons=gm_ikb_content)
+    return await _show_alias_panel(call, item_id)
+
+
+@bot.on_callback_query(filters.regex('alias_clear') & admins_on_filter)
+async def alias_clear(_, call):
+    await callAnswer(call, '🧹 正在清空别名')
+    try:
+        item_id = int(call.data.split('-')[1])
+    except (IndexError, ValueError):
+        return await editMessage(call, '⚠️ item_id 参数错误。', buttons=gm_ikb_content)
+
+    ok, payload = await emby.set_item_other_name(item_id, '')
+    if not ok:
+        error = payload.get('error', payload) if isinstance(payload, dict) else payload
+        return await editMessage(call, f'⚠️ 清空别名失败：{error}', buttons=alias_setting_ikb(item_id))
+    return await _show_alias_panel(call, item_id)
+
+
+@bot.on_callback_query(filters.regex('alias_modify') & admins_on_filter)
+async def alias_modify(_, call):
+    await callAnswer(call, '✏️ 修改别名')
+    try:
+        item_id = int(call.data.split('-')[1])
+    except (IndexError, ValueError):
+        return await editMessage(call, '⚠️ item_id 参数错误。', buttons=gm_ikb_content)
+
+    send = await editMessage(call,
+                             f'✏️ **修改别名**\n\n'
+                             f'· item_id | `{item_id}`\n\n'
+                             f'- 请在 120s 内发送新的别名\n'
+                             f'- 退出请发送 /cancel')
+    if send is False:
+        return
+
+    content = await callListen(call, 120, buttons=alias_setting_ikb(item_id))
+    if content is False:
+        return
+    elif content.text == '/cancel':
+        await content.delete()
+        return await _show_alias_panel(call, item_id)
+
+    new_alias = content.text.strip()
+    await content.delete()
+    if not new_alias:
+        return await editMessage(call, '⚠️ 别名不能为空。', buttons=alias_setting_ikb(item_id))
+
+    ok, payload = await emby.set_item_other_name(item_id, new_alias)
+    if not ok:
+        error = payload.get('error', payload) if isinstance(payload, dict) else payload
+        return await editMessage(call, f'⚠️ 修改别名失败：{error}', buttons=alias_setting_ikb(item_id))
+    return await _show_alias_panel(call, item_id)
 
 
 # 检索

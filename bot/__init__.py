@@ -35,6 +35,7 @@ schedall = config.schedall
 # emby设置
 emby_api = config.emby_api
 emby_url = config.emby_url
+sidecar_url = config.sidecar_url
 emby_line = config.emby_line
 emby_block = config.emby_block
 extra_emby_libs = config.extra_emby_libs
@@ -54,6 +55,7 @@ tz_api = config.tz_api
 tz_id = config.tz_id
 
 w_anti_chanel_ids = config.w_anti_chanel_ids
+api = config.api
 save_config()
 
 LOGGER.info("配置文件加载完毕")
@@ -70,6 +72,7 @@ user_p = [
 # 取消 BotCommand("exchange", "[私聊] 使用注册码")
 admin_p = user_p + [
     BotCommand("kk", "管理用户 [管理]"),
+    BotCommand("dd", "查询豆瓣ID [管理]"),
     BotCommand("score", "加/减积分 [管理]"),
     BotCommand("coins", f"加/减{sakura_b} [管理]"),
     BotCommand("deleted", f"清理死号 [管理]"),

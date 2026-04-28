@@ -15,6 +15,7 @@
   "money": "花币",
   "emby_api": "xxxxx",
   "emby_url": "http://255.255.255.255:8096",
+  "sidecar_url": "http://255.255.255.255:8097",
   "emby_line": "susuyyds.com",
   "db_host": "localhost",
   "db_user": "",
@@ -81,5 +82,13 @@
     "port": null,
     "username": "",
     "password": ""
+  },
+  "api": {
+    "status": false,
+    "http_url": "0.0.0.0",
+    "http_port": 8838,
+    "allow_origins": [
+      "*"
+    ]
   }
 }
