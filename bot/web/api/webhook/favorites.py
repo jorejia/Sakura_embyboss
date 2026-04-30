@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 
 from bot import LOGGER, bot
 from bot.sql_helper import Session
@@ -23,14 +23,26 @@ async def parse_webhook_payload(request: Request):
 
 
 async def send_favorite_notification(tg_id: int, embyname: str, item_name: str, is_favorite: bool):
-    action = "收藏" if is_favorite else "取消收藏"
     try:
+        text = (
+            f"您收藏了《{item_name}》，将会获得追剧通知哦"
+            if is_favorite
+            else f"您已取消收藏《{item_name}》，不再获得其追剧通知"
+        )
         await bot.send_message(
             chat_id=tg_id,
-            text=f"📢 您的 Emby 账号 {embyname} {action}了《{item_name}》",
+            text=text,
         )
     except Exception as e:
         LOGGER.error(f"发送收藏通知失败: {str(e)}")
+
+
+def build_non_series_favorite_message(item_type: str) -> str:
+    if item_type == "Season":
+        return "您刚刚收藏了一个季条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
+    if item_type == "Episode":
+        return "您刚刚收藏了一个单集条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
+    return "您刚刚收藏了一个非追剧条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
 
 
 @router.post("/webhook/favorites")
@@ -47,7 +59,28 @@ async def handle_favorite_webhook(request: Request):
         embyname = user_data.get("Name", "")
         item_id = item_data.get("Id", "")
         item_name = item_data.get("Name", "")
+        item_type = item_data.get("Type", "")
         is_favorite = item_data.get("UserData", {}).get("IsFavorite", False)
+
+        if item_type != "Series":
+            if item_type == "Movie":
+                return Response(status_code=204)
+            if is_favorite:
+                message = build_non_series_favorite_message(item_type)
+            else:
+                message = "您取消收藏了一个非追剧条目"
+
+            return {
+                "status": "ignored",
+                "message": message,
+                "data": {
+                    "user": {"name": embyname, "id": embyid},
+                    "item": {"name": item_name, "id": item_id, "type": item_type},
+                    "is_favorite": is_favorite,
+                    "event": webhook_data.get("Event", ""),
+                    "date": webhook_data.get("Date", ""),
+                },
+            }
 
         with Session() as session:
             existing = session.query(EmbyFavorites).filter(
