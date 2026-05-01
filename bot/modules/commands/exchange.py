@@ -117,7 +117,7 @@ async def rgs_code(_, msg, register_code):
                 await sendMessage(msg,
                                   f'· 🎟️ 注册码使用 - [{msg.from_user.first_name}](tg://user?id={msg.chat.id}) [{msg.from_user.id}] 使用了 {new_code} 获得 {us1} 天预注册时长，请在服务器未满时创建账户',
                                   send=True)
-                if us1 == 3 or us1 == 7:
+                if us1 == 3:
                     url = "http://127.0.0.1:5000/webhook"
                     response = requests.get(url)
 

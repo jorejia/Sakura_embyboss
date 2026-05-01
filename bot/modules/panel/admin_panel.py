@@ -15,7 +15,7 @@ from bot.sql_helper.sql_code import sql_count_code, sql_count_p_code
 from bot.sql_helper.sql_emby import sql_count_emby
 from bot.func_helper.fix_bottons import gm_ikb_content, open_menu_ikb, gog_rester_ikb, back_open_menu_ikb, \
     back_free_ikb, \
-    re_cr_link_ikb, close_it_ikb, ch_link_ikb, date_ikb, cr_paginate, cr_renew_ikb, alias_setting_ikb
+    re_cr_link_ikb, re_cr_activity_ikb, close_it_ikb, ch_link_ikb, date_ikb, cr_paginate, cr_renew_ikb, alias_setting_ikb
 from bot.func_helper.msg_utils import callAnswer, editMessage, sendPhoto, callListen, deleteMessage, sendMessage
 from bot.func_helper.utils import open_check, cr_link_one, cr_link_activity
 
@@ -269,30 +269,30 @@ async def cr_activity(_, call):
     if send is False:
         return
 
-    content = await callListen(call, 120, buttons=re_cr_link_ikb)
+    content = await callListen(call, 120, buttons=re_cr_activity_ikb)
     if content is False:
         return
     elif content.text == '/cancel':
         await content.delete()
-        return await editMessage(call, '⭕ 您已经取消操作了。', buttons=re_cr_link_ikb)
+        return await editMessage(call, '⭕ 您已经取消操作了。', buttons=re_cr_activity_ikb)
     try:
         await content.delete()
         times, count, method = content.text.split()
         count = int(count)
         days = int(times)
         if method != 'code' and method != 'link':
-            return editMessage(call, '⭕ 输入的method参数有误', buttons=re_cr_link_ikb)
+            return editMessage(call, '⭕ 输入的method参数有误', buttons=re_cr_activity_ikb)
     except (ValueError, IndexError):
-        return await editMessage(call, '⚠️ 检查输入，有误。', buttons=re_cr_link_ikb)
+        return await editMessage(call, '⚠️ 检查输入，有误。', buttons=re_cr_activity_ikb)
     else:
         links = await cr_link_activity(call.from_user.id, times, count, days, method)
         if links is None:
-            return await editMessage(call, '⚠️ 数据库插入失败，请检查数据库。', buttons=re_cr_link_ikb)
+            return await editMessage(call, '⚠️ 数据库插入失败，请检查数据库。', buttons=re_cr_activity_ikb)
         links = f"🎯 {bot_name}已为您生成了 **{days}天** 活动码 {count} 个\n\n" + links
         chunks = [links[i:i + 4096] for i in range(0, len(links), 4096)]
         for chunk in chunks:
             await sendMessage(content, chunk, buttons=close_it_ikb)
-        await editMessage(call, f'📂 {bot_name}已为 您 生成了 {count} 个 {days} 天活动码', buttons=re_cr_link_ikb)
+        await editMessage(call, f'📂 {bot_name}已为 您 生成了 {count} 个 {days} 天活动码', buttons=re_cr_activity_ikb)
         LOGGER.info(f"【admin】：{bot_name}已为 {content.from_user.id} 生成了 {count} 个 {days} 天活动码")
 
 

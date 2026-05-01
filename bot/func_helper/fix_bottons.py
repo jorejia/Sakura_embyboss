@@ -172,6 +172,7 @@ def open_menu_ikb(openstats, timingstats) -> InlineKeyboardMarkup:
 back_free_ikb = ikb([[('🔙 返回上一级', 'open-menu')]])
 back_open_menu_ikb = ikb([[('🪪 重新定时', 'open_timing'), ('🔙 注册状态', 'open-menu')]])
 re_cr_link_ikb = ikb([[('♻️ 继续创建', 'cr_link'), ('🎗️ 返回主页', 'manage')]])
+re_cr_activity_ikb = ikb([[('♻️ 继续创建', 'cr_activity'), ('🎗️ 返回主页', 'manage')]])
 close_it_ikb = ikb([[('❌ - Close', 'closeit')]])
 
 
