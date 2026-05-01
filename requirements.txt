@@ -7,7 +7,6 @@ uvloop~=0.17.0
 asyncio~=3.4.3
 APScheduler~=3.10.1
 pykeyboard~=0.1.5
-humanize~=4.6.0
 cacheout~=0.14.1
 SQLAlchemy~=2.0.23
 pytz~=2022.6

@@ -25,9 +25,9 @@ async def parse_webhook_payload(request: Request):
 async def send_favorite_notification(tg_id: int, embyname: str, item_name: str, is_favorite: bool):
     try:
         text = (
-            f"您收藏了《{item_name}》，将会获得追剧通知哦"
+            f"📢您收藏了《{item_name}》，将会获得追剧通知哦"
             if is_favorite
-            else f"您已取消收藏《{item_name}》，不再获得其追剧通知"
+            else f"📢您已取消收藏《{item_name}》，不再获得其追剧通知"
         )
         await bot.send_message(
             chat_id=tg_id,
@@ -35,6 +35,13 @@ async def send_favorite_notification(tg_id: int, embyname: str, item_name: str, 
         )
     except Exception as e:
         LOGGER.error(f"发送收藏通知失败: {str(e)}")
+
+
+async def send_text_notification(tg_id: int, text: str):
+    try:
+        await bot.send_message(chat_id=tg_id, text=text)
+    except Exception as e:
+        LOGGER.error(f"发送提示通知失败: {str(e)}")
 
 
 def build_non_series_favorite_message(item_type: str) -> str:
@@ -69,6 +76,11 @@ async def handle_favorite_webhook(request: Request):
                 message = build_non_series_favorite_message(item_type)
             else:
                 message = "您取消收藏了一个非追剧条目"
+
+            with Session() as session:
+                user = session.query(Emby).filter(Emby.embyid == embyid).first()
+                if user and user.tg and user.notify_enabled == 1:
+                    await send_text_notification(user.tg, message)
 
             return {
                 "status": "ignored",

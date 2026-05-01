@@ -1,7 +1,7 @@
 """
 可调节设置
 此处为控制面板2，主要是为了在bot中能够设置一些变量
-部分目前有 导出日志，更改探针，更改emby线路，设置购买按钮
+部分目前有 导出日志，更改emby线路，设置购买按钮
 
 """
 from bot import bot, prefixes, bot_photo, Now, LOGGER, config, save_config, _open, user_buy
@@ -35,41 +35,6 @@ async def log_out(_, call):
         return LOGGER.info(f"【admin】：{call.from_user.id} - 导出日志失败！")
 
     LOGGER.info(f"【admin】：{call.from_user.id} - 导出日志成功！")
-
-
-@bot.on_callback_query(filters.regex("set_tz") & admins_on_filter)
-async def set_tz(_, call):
-    await callAnswer(call, '📌 设置探针')
-    send = await editMessage(call,
-                             "【设置探针】\n\n请依次输入探针地址，api_token，设置的检测多个id 如：\n**【地址】https://tz.susuyyds.xyz\n【api_token】xxxxxx\n【数字】1 2 3**\n取消点击 /cancel")
-    if send is False:
-        return
-
-    txt = await callListen(call, 120, back_set_ikb('set_tz'))
-    if txt is False:
-        return
-
-    elif txt.text == '/cancel':
-        await txt.delete()
-        await editMessage(call, '__您已经取消输入__ **会话已结束！**', buttons=back_set_ikb('set_tz'))
-    else:
-        await txt.delete()
-        try:
-            c = txt.text.split("\n")
-            s_tz = c[0]
-            s_tzapi = c[1]
-            s_tzid = c[2].split()
-        except IndexError:
-            await editMessage(call, f"请注意格式！您的输入如下：\n\n`{txt.text}`", buttons=back_set_ikb('set_tz'))
-        else:
-            config.tz_ad = s_tz
-            config.tz_api = s_tzapi
-            config.tz_id = s_tzid
-            save_config()
-            await editMessage(call,
-                              f"【网址】\n{s_tz}\n\n【api_token】\n{s_tzapi}\n\n【检测的ids】\n{config.tz_id} **Done！**",
-                              buttons=back_config_p_ikb)
-            LOGGER.info(f"【admin】：{call.from_user.id} - 更新探针设置完成")
 
 
 # 设置 emby 线路

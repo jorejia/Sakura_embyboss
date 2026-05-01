@@ -135,9 +135,6 @@ class Config(BaseModel):
     db_user: str
     db_pwd: str
     db_name: str
-    tz_ad: Optional[str] = None
-    tz_api: Optional[str] = None
-    tz_id: Optional[List[int]] = []
     ranks: Ranks
     schedall: Schedall
     db_is_docker: bool = False

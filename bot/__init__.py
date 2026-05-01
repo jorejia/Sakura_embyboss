@@ -49,11 +49,6 @@ db_is_docker = config.db_is_docker
 db_docker_name = config.db_docker_name
 db_backup_dir = config.db_backup_dir
 db_backup_maxcount = config.db_backup_maxcount
-# 探针
-tz_ad = config.tz_ad
-tz_api = config.tz_api
-tz_id = config.tz_id
-
 w_anti_chanel_ids = config.w_anti_chanel_ids
 api = config.api
 save_config()

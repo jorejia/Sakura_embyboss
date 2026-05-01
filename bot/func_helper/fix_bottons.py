@@ -1,14 +1,9 @@
-from cacheout import Cache
 from pykeyboard import InlineKeyboard, InlineButton
 from pyrogram.types import InlineKeyboardMarkup
 from pyromod.helpers import ikb, array_chunk
-from bot import chanel, main_group, bot_name, extra_emby_libs, tz_id, tz_ad, tz_api, _open, user_buy, sakura_b, \
-    schedall
-from bot.func_helper import nezha_res
+from bot import chanel, main_group, bot_name, extra_emby_libs, _open, user_buy, sakura_b, schedall
 from bot.func_helper.emby import emby
 from bot.func_helper.utils import judge_admins, members_info, convert_to_beijing_time
-
-cache = Cache()
 
 """start面板 ↓"""
 
@@ -59,6 +54,7 @@ def members_ikb(emby=False) -> InlineKeyboardMarkup:
 
 back_start_ikb = ikb([[('💫 回到首页', 'back_start')]])
 back_members_ikb = ikb([[('💨 返回', 'members')]])
+server_info_ikb = ikb([[('🔙 - 用户', 'members'), ('❌ - 上一级', 'back_start')]])
 re_create_ikb = ikb([[('🍥 重新输入', 'create'), ('💫 用户主页', 'members')]])
 re_changetg_ikb = ikb([[('✨ 换绑TG', 'changetg'), ('💫 用户主页', 'members')]])
 re_bindtg_ikb = ikb([[('✨ 绑定TG', 'bindtg'), ('💫 用户主页', 'members')]])
@@ -160,27 +156,6 @@ def checkin_menu_ikb(options=None) -> InlineKeyboardMarkup:
         keyboard.row(*[InlineButton(str(option), f'checkin_answer:{option}') for option in options])
     keyboard.row(InlineButton('♻️ 主界面', 'back_start'))
     return keyboard
-
-"""server ↓"""
-
-
-@cache.memoize(ttl=120)
-async def cr_page_server():
-    """
-    翻页服务器面板
-    :return:
-    """
-    sever = nezha_res.sever_info(tz_ad, tz_api, tz_id)
-    if not sever:
-        return ikb([[('🔙 - 用户', 'members'), ('❌ - 上一级', 'back_start')]]), None
-    d = []
-    for i in sever:
-        d.append([i['name'], f'server:{i["id"]}'])
-    lines = array_chunk(d, 3)
-    lines.append([['🔙 - 用户', 'members'], ['❌ - 上一级', 'back_start']])
-    # keyboard是键盘，a是sever
-    return ikb(lines), sever
-
 
 """admins ↓"""
 
@@ -291,8 +266,8 @@ def config_preparation() -> InlineKeyboardMarkup:
     uplays = '✅' if _open.uplays else '❎'
     site = '✅' if _open.site else '❎'
     keyboard = ikb(
-        [[('📄 导出日志', 'log_out'), ('📌 设置探针', 'set_tz')],
-         [('💠 emby线路', 'set_line'), (f'{site} 正常/隐身模式', 'change_site_open')],
+        [[('📄 导出日志', 'log_out'), ('💠 emby线路', 'set_line')],
+         [(f'{site} 正常/隐身模式', 'change_site_open')],
          [(f'{code} 注册码续期', 'open_allow_code'), (f'{buy_stat} 开关购买', 'set_buy')],
          [(f'{leave_ban} 退群封禁', 'leave_ban'), (f'{uplays} 自动看片结算', 'set_uplays')],
          [('🔙 返回', 'manage')]])

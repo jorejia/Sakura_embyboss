@@ -69,12 +69,16 @@ async def rgs_code(_, msg, register_code):
                     await emby.emby_change_policy(id=embyid, method=False)
                     await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
                                         f'请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')                   
-            elif lv == 'b':
-                ex_new = data.ex + timedelta(days=us1)
+            elif lv == 'b' or lv == 'a':
+                base_ex = data.ex if data.ex and data.ex > datetime.now() else datetime.now()
+                ex_new = base_ex + timedelta(days=us1)
                 session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
                 session.commit()
                 await sendMessage(msg,
                                   f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')
+            else:
+                await sendMessage(msg,
+                                  f'⚠️ 当前账户状态 `{lv}` 暂不支持使用注册码续期，请联系管理员检查。')
             session.commit()
             new_code = register_code[:-7] + "░" * 7
             LOGGER.info(f"【续费】：{msg.from_user.first_name}[{msg.chat.id}] 使用了 {register_code}，到期时间：{ex_new}")
