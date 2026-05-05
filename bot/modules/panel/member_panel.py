@@ -23,7 +23,8 @@ from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create
     re_reset_ikb, re_changetg_ikb, emby_block_ikb, user_emby_block_ikb, user_emby_unblock_ikb, re_exchange_b_ikb, \
     dianbo_ikb, re_douban_ikb, store_ikb, store_vip_ikb, store_c_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, \
     user_query_page, notify_menu_ikb, parental_menu_ikb, parental_rating_label, line_menu_ikb, line_label
-from bot.func_helper.msg_utils import callAnswer, editMessage, callListen, sendMessage, ask_return, deleteMessage
+from bot.func_helper.msg_utils import callAnswer, editMessage, callListen, sendMessage, ask_return, deleteMessage, \
+    escape_markdown
 from bot.modules.commands import p_start
 from bot.modules.commands.exchange import rgs_code
 from bot.sql_helper.sql_code import sql_count_c_code
@@ -389,27 +390,29 @@ async def reset(_, call):
                 await editMessage(call, f'**💢 验证不通过，{m.text} 安全码错误。**', buttons=re_reset_ikb)
             else:
                 await m.delete()
-                await editMessage(call, '🎯 请在 120s内 输入你要更新的密码,不限制中英文，emoji。特殊字符部分支持，其他概不负责。\n\n'
-                                        '点击 /cancel 将重置为空密码并退出。 无更改退出状态请等待120s')
+                await editMessage(call, '🎯 请在 120s 内输入你要更新的密码。\n\n'
+                                        '要求：\n'
+                                        '- 长度至少 6 位\n'
+                                        '- 支持英文（区分大小写）、数字，尽量不要用特殊字符\n\n'
+                                        '点击 /cancel 取消本次操作。无更改退出状态请等待 120s')
                 mima = await callListen(call, 120, buttons=back_members_ikb)
                 if mima is False:
                     return
 
                 elif mima.text == '/cancel':
                     await mima.delete()
-                    await editMessage(call, '**🎯 收到，正在重置ing。。。**')
-                    if await emby.emby_reset(id=e.embyid) is True:
-                        await editMessage(call, '🕶️ 操作完成！已为您重置密码为 空。', buttons=back_members_ikb)
-                        LOGGER.info(f"【重置密码】：{call.from_user.id} 成功重置了空密码！")
-                    else:
-                        await editMessage(call, '🫥 重置密码操作失败！请联系管理员。')
-                        LOGGER.error(f"【重置密码】：{call.from_user.id} 重置密码失败 ！")
+                    await editMessage(call, '__您已经取消输入__ **会话已结束！**', buttons=back_members_ikb)
 
                 else:
                     await mima.delete()
+                    if len(mima.text) < 6:
+                        await editMessage(call, '⚠️ 新密码长度不能少于 6 位，请重新操作。', buttons=re_reset_ikb)
+                        return
+
                     await editMessage(call, '**🎯 收到，正在重置ing。。。**')
                     if await emby.emby_reset(id=e.embyid, new=mima.text) is True:
-                        await editMessage(call, f'🕶️ 操作完成！已为您重置密码为 `{mima.text}`',
+                        escaped_password = escape_markdown(mima.text)
+                        await editMessage(call, f'🕶️ 操作完成！新密码如下，可直接复制：\n\n`{escaped_password}`',
                                           buttons=back_members_ikb)
                         LOGGER.info(f"【重置密码】：{call.from_user.id} 成功重置了密码为 {mima.text} ！")
                     else:
