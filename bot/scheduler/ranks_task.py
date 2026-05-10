@@ -3,10 +3,34 @@
 """
 from pyrogram import enums
 from datetime import date
+from pathlib import Path
 
 from bot.func_helper.emby import emby
 from bot.ranks_helper import ranks_draw
 from bot import bot, group, ranks, LOGGER, schedall, save_config
+
+
+ANNOUNCE_FILE_NAME = "announce.md"
+
+
+def load_day_ranks_announce() -> str:
+    config_dir = Path("config.json").resolve().parent
+    announce_path = config_dir / ANNOUNCE_FILE_NAME
+
+    try:
+        if announce_path.exists():
+            content = announce_path.read_text(encoding="utf-8")
+        else:
+            return str(ranks.announce or "").rstrip()
+    except Exception as e:
+        LOGGER.warning(f"【ranks_task】读取公告文件失败 {announce_path}: {e}")
+        return str(ranks.announce or "").rstrip()
+
+    content = content.replace("\r\n", "\n").replace("\r", "\n")
+    lines = content.split("\n")
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return "\n".join(lines)
 
 
 async def day_ranks(pin_mode=True):
@@ -41,7 +65,8 @@ async def day_ranks(pin_mode=True):
             user_id, item_id, item_type, name, count, duarion = tuple(tv)
             tmp += str(i + 1) + "." + name + " - " + str(count) + "\n"
         payload += tmp
-    payload = f"**【公告&日榜】**\n\n**📢公告:**\n\n{ranks.announce}\n\n" + payload + "\n#DayRanks" + "  " + date.today().strftime('%Y-%m-%d')
+    announce = load_day_ranks_announce()
+    payload = f"**【公告&日榜】**\n\n**📢公告:**\n\n{announce}\n\n" + payload + "\n#DayRanks" + "  " + date.today().strftime('%Y-%m-%d')
     message_info = await bot.send_photo(chat_id=group[0], photo=open(path, "rb"), caption=payload,
                                         parse_mode=enums.ParseMode.MARKDOWN)
     if pin_mode:
