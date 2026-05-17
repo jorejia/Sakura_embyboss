@@ -44,12 +44,11 @@ async def send_text_notification(tg_id: int, text: str):
         LOGGER.error(f"发送提示通知失败: {str(e)}")
 
 
-def build_non_series_favorite_message(item_type: str) -> str:
-    if item_type == "Season":
-        return "您刚刚收藏了一个季条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
-    if item_type == "Episode":
-        return "您刚刚收藏了一个单集条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
-    return "您刚刚收藏了一个非追剧条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
+def build_season_episode_message(item_type: str, is_favorite: bool) -> str:
+    item_label = "季" if item_type == "Season" else "集"
+    if is_favorite:
+        return f"您刚刚收藏了一个{item_label}条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
+    return f"您刚刚取消收藏了一个{item_label}条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
 
 
 @router.post("/webhook/favorites")
@@ -70,12 +69,10 @@ async def handle_favorite_webhook(request: Request):
         is_favorite = item_data.get("UserData", {}).get("IsFavorite", False)
 
         if item_type != "Series":
-            if item_type == "Movie":
+            if item_type not in {"Season", "Episode"}:
                 return Response(status_code=204)
-            if is_favorite:
-                message = build_non_series_favorite_message(item_type)
-            else:
-                message = "您取消收藏了一个非追剧条目"
+
+            message = build_season_episode_message(item_type, is_favorite)
 
             with Session() as session:
                 user = session.query(Emby).filter(Emby.embyid == embyid).first()
