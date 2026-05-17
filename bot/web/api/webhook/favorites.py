@@ -47,8 +47,8 @@ async def send_text_notification(tg_id: int, text: str):
 def build_season_episode_message(item_type: str, is_favorite: bool) -> str:
     item_label = "季" if item_type == "Season" else "集"
     if is_favorite:
-        return f"您刚刚收藏了一个{item_label}条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
-    return f"您刚刚取消收藏了一个{item_label}条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
+        return f"📢您刚刚收藏了一个{item_label}条目，不会获得追剧提醒，如有需要请收藏剧集条目哦"
+    return f"📢您刚刚取消收藏了一个{item_label}条目"
 
 
 @router.post("/webhook/favorites")
