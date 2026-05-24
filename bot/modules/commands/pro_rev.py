@@ -5,6 +5,7 @@
 """
 import random
 import asyncio
+from datetime import datetime
 from pyrogram import filters
 from pyrogram.errors import BadRequest
 
@@ -111,7 +112,13 @@ async def rev_user(_, msg):
     else:
         uid = msg.reply_to_message.from_user.id
         first = await bot.get_chat(uid)
-    if sql_update_emby(Emby.tg == uid, lv='b'):
+    e = sql_get_emby(tg=uid)
+    if e and e.embyid:
+        success = sql_update_emby(Emby.tg == uid, lv='b', ex=datetime.now())
+    else:
+        success = sql_update_emby(Emby.tg == uid, lv='b')
+
+    if success:
         await asyncio.gather(sendMessage(msg,
                                          f"🤖 很遗憾 [{first.first_name}](tg://user?id={uid}) 被 [{msg.from_user.first_name}](tg://user?id={msg.from_user.id}) 移出白名单."),
                              deleteMessage(msg))
