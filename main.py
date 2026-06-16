@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-
 import asyncio
+import socket
 
 import uvloop
 
@@ -29,9 +30,60 @@ def _proxy_log_text():
     return f"scheme={proxy.scheme}, host={proxy.hostname}, port={proxy.port}, {auth}"
 
 
+def _tcp_check(host, port, timeout=5):
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True, None
+    except OSError as e:
+        return False, f"{type(e).__name__}: {e}"
+
+
+def _check_telegram_network():
+    proxy = config.proxy
+    if proxy and proxy.scheme:
+        if not proxy.hostname or not proxy.port:
+            LOGGER.error(f"【Telegram网络诊断】已配置代理但 hostname/port 不完整。{_proxy_log_text()}")
+            return
+
+        ok, error = _tcp_check(proxy.hostname, proxy.port, timeout=5)
+        if not ok:
+            LOGGER.error(
+                f"【Telegram网络诊断】代理端口不可达，Pyrogram 无法通过代理连接 Telegram。"
+                f"{_proxy_log_text()}，错误：{error}"
+            )
+        return
+
+    checks = [
+        ("Telegram Bot API", "api.telegram.org", 443),
+        ("Telegram MTProto DC1", "149.154.175.53", 443),
+        ("Telegram MTProto DC2", "149.154.167.51", 443),
+        ("Telegram MTProto DC4", "149.154.167.91", 443),
+        ("Telegram MTProto DC5", "91.108.56.151", 443),
+    ]
+    failed = []
+    for name, host, port in checks:
+        ok, error = _tcp_check(host, port, timeout=5)
+        if not ok:
+            failed.append(f"{name} {host}:{port} -> {error}")
+
+    if len(failed) == len(checks):
+        LOGGER.error(
+            "【Telegram网络诊断】当前未配置代理，且服务器直连 Telegram 全部失败。"
+            "这通常表示服务器网络无法访问 Telegram，需要在 config.json 配置可用代理。"
+            f"失败明细：{' | '.join(failed)}"
+        )
+    elif failed:
+        LOGGER.warning(
+            "【Telegram网络诊断】当前未配置代理，部分 Telegram 地址直连失败。"
+            "如果随后出现 Connection timed out，优先检查服务器到 Telegram MTProto 的路由/防火墙。"
+            f"失败明细：{' | '.join(failed)}"
+        )
+
+
 async def main():
     started = False
     try:
+        _check_telegram_network()
         await bot.start()
         started = True
 
