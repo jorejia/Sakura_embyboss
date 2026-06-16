@@ -7,6 +7,7 @@ Date:2023/12/12
 # logger_config.py
 
 import datetime
+import logging
 from loguru import logger
 
 # 转换为亚洲上海时区
@@ -21,9 +22,39 @@ logger.add(f"log/log_{Now:%Y%m%d}.txt", format="{time} - {name} - {level} - {mes
            retention="30 days")
 
 
-# 为 pyrogram 的日志记录器添加一个新的处理器，只处理 WARNING 级别或更高级别的日志消息
-# logger.add(f"log/log_{Now:%Y%m%d}.txt", format="{time} - {name} - {level} - {message}", level="WARNING",
-#            filter=lambda record: record["name"] == "pyrogram")  没什么用
+class PyrogramContextFilter(logging.Filter):
+    def filter(self, record):
+        if not record.name.startswith("pyrogram"):
+            return True
+
+        message = record.getMessage()
+        if "Unable to connect due to network issues" in message:
+            record.msg = (
+                "【Telegram连接阶段】Pyrogram 在 bot.start() 建立 Telegram MTProto 会话时连接失败；"
+                "连接对象是 Telegram 数据中心，不是 Emby/Sidecar/WebHook。原始错误："
+                + message
+            )
+            record.args = ()
+        elif "Connection failed! Trying again" in message:
+            record.msg = (
+                "【Telegram连接阶段】Pyrogram 连接 Telegram MTProto 数据中心失败，正在按库内重试策略重连。"
+                "这仍然发生在 bot.start() 启动阶段。原始提示："
+                + message
+            )
+            record.args = ()
+        return True
+
+
+pyrogram_handler = logging.StreamHandler()
+pyrogram_handler.setLevel(logging.WARNING)
+pyrogram_handler.addFilter(PyrogramContextFilter())
+pyrogram_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+
+pyrogram_logger = logging.getLogger("pyrogram")
+pyrogram_logger.setLevel(logging.WARNING)
+pyrogram_logger.propagate = False
+if not pyrogram_logger.handlers:
+    pyrogram_logger.addHandler(pyrogram_handler)
 
 
 def logu(name):
