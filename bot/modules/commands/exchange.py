@@ -119,7 +119,16 @@ async def rgs_code(_, msg, register_code):
                                   send=True)
                 if us1 == 3:
                     url = "http://127.0.0.1:5000/webhook"
-                    response = requests.get(url)
+                    try:
+                        response = requests.get(url, timeout=5)
+                        if response.status_code >= 400:
+                            LOGGER.warning(f"【本机Webhook网络】GET {url} 返回 HTTP {response.status_code}，body={response.text[:200]}")
+                    except requests.exceptions.Timeout as e:
+                        LOGGER.error(f"【本机Webhook网络】GET {url} 超时，请检查 127.0.0.1:5000 服务是否启动。error={type(e).__name__}: {e}")
+                    except requests.exceptions.ConnectionError as e:
+                        LOGGER.error(f"【本机Webhook网络】GET {url} 连接失败，请检查端口、防火墙或 webhook 服务。error={type(e).__name__}: {e}")
+                    except requests.exceptions.RequestException as e:
+                        LOGGER.error(f"【本机Webhook网络】GET {url} 请求异常。error={type(e).__name__}: {e}")
 
 
             LOGGER.info(

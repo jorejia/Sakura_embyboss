@@ -4,13 +4,83 @@
 emby的api操作方法
 """
 from datetime import datetime, timedelta, timezone
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-import requests as r
+import requests
 from bot import sidecar_url, emby_url, emby_api, _open, save_config, emby_block, schedall, LOGGER, another_line
 from bot.sql_helper.sql_emby import sql_update_emby, Emby
 from bot.sql_helper.sql_emby2 import sql_add_emby2, sql_delete_emby2
 from bot.sql_helper.sql_favorites import sql_delete_favorites_by_embyid
 from bot.func_helper.utils import pwd_create, convert_runtime, cache
+
+
+def _mask_url(url):
+    try:
+        split_url = urlsplit(str(url))
+        masked_query = []
+        for key, value in parse_qsl(split_url.query, keep_blank_values=True):
+            if key.lower() in {"api_key", "apikey", "token", "access_token"}:
+                value = "***"
+            masked_query.append((key, value))
+        return urlunsplit(split_url._replace(query=urlencode(masked_query)))
+    except Exception:
+        return str(url)
+
+
+def _service_name(url):
+    url_text = str(url)
+    if sidecar_url and url_text.startswith(sidecar_url.rstrip("/")):
+        return "Sidecar"
+    if emby_url and url_text.startswith(emby_url.rstrip("/")):
+        return "Emby"
+    return "HTTP"
+
+
+def _request_error_message(method, url, timeout, exc):
+    return (
+        f"【{_service_name(url)}网络】{method} 请求失败，"
+        f"url={_mask_url(url)}，timeout={timeout}，"
+        f"error={type(exc).__name__}: {exc}"
+    )
+
+
+class LoggedRequests:
+    @staticmethod
+    def request(method, url, **kwargs):
+        timeout = kwargs.get("timeout", "未设置")
+        try:
+            response = requests.request(method, url, **kwargs)
+        except requests.exceptions.Timeout as e:
+            LOGGER.error(_request_error_message(method, url, timeout, e) + "。判断：目标服务无响应或网络链路超时")
+            raise
+        except requests.exceptions.ConnectionError as e:
+            LOGGER.error(_request_error_message(method, url, timeout, e) + "。判断：DNS/端口/路由/防火墙/服务未启动/代理链路异常")
+            raise
+        except requests.exceptions.RequestException as e:
+            LOGGER.error(_request_error_message(method, url, timeout, e))
+            raise
+
+        if response.status_code >= 400:
+            LOGGER.warning(
+                f"【{_service_name(url)}网络】{method} 请求返回 HTTP {response.status_code}，"
+                f"url={_mask_url(response.url)}，timeout={timeout}，body={response.text[:200]}"
+            )
+        return response
+
+    @staticmethod
+    def get(url=None, **kwargs):
+        return LoggedRequests.request("GET", url, **kwargs)
+
+    @staticmethod
+    def post(url=None, **kwargs):
+        return LoggedRequests.request("POST", url, **kwargs)
+
+    @staticmethod
+    def delete(url=None, **kwargs):
+        return LoggedRequests.request("DELETE", url, **kwargs)
+
+
+r = LoggedRequests
 
 
 def create_policy(admin=False, disable=False, limit: int = 2, block: list = None):
