@@ -204,6 +204,9 @@ class Embyservice:
     def _internal_item_other_name_url(self):
         return f"{sidecar_url.rstrip('/')}/internal/item-other-name"
 
+    def _internal_auth_tokens_clear_url(self):
+        return f"{sidecar_url.rstrip('/')}/internal/auth-tokens/clear"
+
     async def emby_create(self, tg: int, name, pwd2, us: int, stats):
         """
         创建账户
@@ -298,6 +301,7 @@ class Embyservice:
         if _pwd.status_code == 200 or 204:
             if new is None:
                 if sql_update_emby(Emby.embyid == id, pwd=None) is True:
+                    self.clear_sidecar_auth_tokens(id)
                     return True
                 return False
             else:
@@ -307,9 +311,31 @@ class Embyservice:
                                  json=pwd2)
                 if new_pwd.status_code == 200 or 204:
                     if sql_update_emby(Emby.embyid == id, pwd=new) is True:
+                        self.clear_sidecar_auth_tokens(id)
                         return True
                     return False
         else:
+            return False
+
+    def clear_sidecar_auth_tokens(self, user_id):
+        if not sidecar_url:
+            LOGGER.warning(f"重置密码后跳过 Sidecar token 清理：未配置 sidecar_url，user_id={user_id}")
+            return False
+        try:
+            resp = r.post(
+                self._internal_auth_tokens_clear_url(),
+                headers={"accept": "application/json"},
+                params={"userid": user_id},
+                timeout=5
+            )
+            if resp.status_code not in (200, 204):
+                LOGGER.error(f"重置密码后清理 Sidecar token 失败：user_id={user_id}, HTTP {resp.status_code}, body={resp.text[:200]}")
+                return False
+            payload = resp.json() if resp.content else {}
+            LOGGER.info(f"重置密码后已通知 Sidecar 清理 token：user_id={user_id}, count={payload.get('ClearedTokenCount', 0)}")
+            return True
+        except Exception as e:
+            LOGGER.error(f"重置密码后清理 Sidecar token 异常：user_id={user_id}, error={e}")
             return False
 
     async def emby_block(self, id, stats=0, block=emby_block):

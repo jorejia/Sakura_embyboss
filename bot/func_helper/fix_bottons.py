@@ -98,7 +98,7 @@ def parental_rating_label(value: int) -> str:
         7: '12+ 指导',
         8: '16+ 青少',
         9: '17+ 限制',
-        10: '18+ 成人'
+        10: '18+ 全部'
     }
     return mapping.get(value, f'未知({value})')
 
