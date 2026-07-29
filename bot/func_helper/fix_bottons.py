@@ -43,7 +43,7 @@ def members_ikb(emby=False) -> InlineKeyboardMarkup:
     """
     if emby:
         return ikb([[('🏪 兑换商店', 'storeall'), ('📺 追剧推送', 'notify_menu')],
-                    [('🛡️ 家长控制', 'parental_menu'), ('🛣️ 线路选择', 'line_menu')],
+                    [('🛡️ 家长控制', 'parental_menu'), ('🛣️ 直连切线', 'line_menu')],
                     [('🎬 豆瓣点播', 'dianbo'), ('⭕ 重置密码', 'reset')],
                     [('♻️ 主界面', 'back_start')]])
     else:
@@ -109,7 +109,7 @@ def line_menu_ikb(current_value: int):
         return f'{prefix}{text}'
 
     return ikb([
-        [[label(1, '直连一线'), 'line_set:1'], [label(2, '直连二线'), 'line_set:2']],
+        [[label(1, '直连一线'), 'line_set:1'], [label(2, '直连二线'), 'line_set:2'], [label(3, '直连三线'), 'line_set:3']],
         [('🔙 返回', 'members')]
     ])
 
@@ -117,7 +117,8 @@ def line_menu_ikb(current_value: int):
 def line_label(value: int) -> str:
     mapping = {
         1: '直连一线',
-        2: '直连二线'
+        2: '直连二线',
+        3: '直连三线'
     }
     return mapping.get(value, f'未知({value})')
 
