@@ -23,6 +23,7 @@ async def server(_, call):
 
     await callAnswer(call, '🌐查询中...')
 
+    # 用户服务器页按配置文件的容量与人数展示，不使用数据库实时统计。
     all_user = _open.all_user
     emby_user = _open.tem
     remain_user = max(all_user - emby_user, 0)

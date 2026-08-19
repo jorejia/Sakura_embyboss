@@ -5,10 +5,11 @@ kk - 纯装x
 import pyrogram
 from pyrogram import filters
 from pyrogram.errors import BadRequest
-from bot import bot, prefixes, owner, bot_photo, admins, LOGGER, extra_emby_libs
+from bot import bot, prefixes, owner, bot_photo, admins, LOGGER, extra_emby_libs, default_line_id
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import admins_on_filter
 from bot.func_helper.fix_bottons import cr_kk_ikb, gog_rester_ikb
+from bot.func_helper.line_access import revoke_line_pro_access
 from bot.func_helper.msg_utils import deleteMessage, sendMessage, sendPhoto, editMessage
 from bot.func_helper.utils import judge_admins, cr_link_two
 from bot.sql_helper.sql_emby import sql_get_emby, sql_update_emby, Emby
@@ -79,6 +80,65 @@ async def douban_info(_, msg):
     if not e.douban:
         return await sendMessage(msg, f'⛔ [{first.first_name}](tg://user?id={uid}) 当前未绑定豆瓣ID', timer=15)
     await sendMessage(msg, f'`{e.douban}`', timer=15)
+
+
+# 解除直连 Pro：与到期任务一致，先切回默认线路，再清除 Pro 到期时间。
+@bot.on_callback_query(filters.regex(r'^line_pro_revoke-\d+$'))
+async def revoke_line_pro(_, call):
+    if not judge_admins(call.from_user.id):
+        return await call.answer("请不要以下犯上 ok？", show_alert=True)
+
+    tgid = int(call.data.split("-")[1])
+    if ((tgid == owner and call.from_user.id != owner)
+            or (tgid in admins and tgid != call.from_user.id)):
+        return await call.answer("机器人不可以解除其他 Bot 管理员的直连Pro", show_alert=True)
+
+    user = sql_get_emby(tg=tgid)
+    if user is None:
+        return await call.answer("该用户没有 Bot 数据", show_alert=True)
+    if user.line_pro_ex is None:
+        return await call.answer("该用户当前未激活直连Pro", show_alert=True)
+
+    revoked, failed_stage, result = await revoke_line_pro_access(
+        user.embyid,
+        default_line_id,
+        emby.set_use_line,
+        lambda: sql_update_emby(Emby.tg == tgid, line_pro_ex=None),
+    )
+    if not revoked and failed_stage == 'line':
+        LOGGER.error(
+            f"【直连Pro手动撤权】管理员 {call.from_user.id} 撤销 {tgid} 失败："
+            f"切回默认线路 {default_line_id} 失败：{result}"
+        )
+        return await call.answer(
+            f"切回默认线路 {default_line_id} 失败，Pro权限未清除：{result}",
+            show_alert=True,
+        )
+    if not revoked:
+        LOGGER.error(
+            f"【直连Pro手动撤权】管理员 {call.from_user.id} 已将 {tgid} 切回默认线路，"
+            "但清除 line_pro_ex 失败"
+        )
+        return await call.answer("已切回默认线路，但清除Pro权限失败，请重试", show_alert=True)
+
+    await call.answer("✅ 已解除直连Pro")
+    text = (
+        f"管理员 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) "
+        f"已解除你的直连Pro权限，并切回默认线路 {default_line_id}。"
+    )
+    LOGGER.info(f"【直连Pro手动撤权】{call.from_user.id} 已解除 {tgid} 的直连Pro权限")
+    try:
+        await bot.send_message(tgid, text)
+    except Exception as error:
+        LOGGER.warning(f"【直连Pro手动撤权】通知用户 {tgid} 失败：{error}")
+
+    try:
+        first = await bot.get_chat(tgid)
+        panel_text, keyboard = await cr_kk_ikb(tgid, first.first_name)
+        await editMessage(call, panel_text, buttons=keyboard)
+    except Exception as error:
+        LOGGER.warning(f"【直连Pro手动撤权】刷新 /kk 面板失败：{error}")
+        await editMessage(call, f"✅ 已解除用户 `{tgid}` 的直连Pro权限，并切回默认线路 {default_line_id}")
 
 
 # 封禁或者解除

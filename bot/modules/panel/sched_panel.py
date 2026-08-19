@@ -80,6 +80,18 @@ async def sched_panel(_, msg):
                       buttons=sched_buttons())
 
 
+@bot.on_callback_query(filters.regex(r'^expiry_pause_toggle$') & admins_on_filter)
+async def toggle_expiry_pause(_, call):
+    schedall.check_ex_paused = not schedall.check_ex_paused
+    save_config()
+    status = '已暂停' if schedall.check_ex_paused else '已恢复'
+    LOGGER.info(f'【admin】到期检测{status}，操作管理员：{call.from_user.id}')
+    await asyncio.gather(
+        callAnswer(call, f'✅ 到期检测{status}', True),
+        sched_panel(_, call.message),
+    )
+
+
 
 
 
@@ -104,7 +116,12 @@ async def sched_change_policy(_, call):
 @bot.on_message(filters.command('check_ex', prefixes) & admins_on_filter)
 async def check_ex_admin(_, msg):
     send = await msg.reply("🍥 正在运行 【到期检测】。。。")
-    await check_expired()
+    result = await check_expired()
+    if result == 'paused':
+        return await asyncio.gather(
+            msg.delete(),
+            send.edit("⏸️ 【到期检测已暂停】本次未执行"),
+        )
     await asyncio.gather(msg.delete(), send.edit("✅ 【到期检测结束】"))
 
 

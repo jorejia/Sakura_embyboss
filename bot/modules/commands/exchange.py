@@ -7,6 +7,7 @@ from datetime import timedelta, datetime
 
 from bot import bot, _open, LOGGER, bot_photo, user_buy
 from bot.func_helper.emby import emby
+from bot.func_helper.line_access import line_pro_status_text
 from bot.func_helper.fix_bottons import register_code_ikb
 from bot.func_helper.msg_utils import sendMessage, sendPhoto
 from bot.sql_helper.sql_code import Code
@@ -14,9 +15,54 @@ from bot.sql_helper.sql_emby import sql_get_emby, Emby
 from bot.sql_helper import Session
 
 
-async def rgs_code(_, msg, register_code):
-    if _open.stat: return await sendMessage(msg, "🤧 自由注册开启下无法使用注册码。")
+async def _redeem_line_code(msg, register_code, data):
+    if not data.embyid:
+        return await sendMessage(msg, "🔔 **尚未拥有 Emby 账号**\n线路码只能用于已绑定的 Emby 账号。", timer=60)
 
+    now = datetime.now()
+    with Session() as session:
+        code = session.query(Code).filter(Code.code == register_code).with_for_update().first()
+        if not code or code.invite != 'l':
+            return await sendMessage(msg, "⛔ **线路码无效，请确认后重试。**", timer=60)
+        if code.used is not None:
+            return await sendMessage(
+                msg,
+                f'此 `{register_code}` 线路码已被 [{code.used}](tg://user?id={code.used}) 使用。'
+            )
+
+        user = session.query(Emby).filter(Emby.tg == msg.from_user.id).with_for_update().first()
+        if user is None or not user.embyid:
+            return await sendMessage(msg, "🔔 **尚未拥有 Emby 账号**\n线路码只能用于已绑定的 Emby 账号。", timer=60)
+
+        days = code.us
+        base_ex = user.line_pro_ex if user.line_pro_ex and user.line_pro_ex > now else now
+        line_pro_ex = base_ex + timedelta(days=days)
+        updated = session.query(Code).filter(
+            Code.code == register_code,
+            Code.invite == 'l',
+            Code.used.is_(None)
+        ).update({Code.used: msg.from_user.id, Code.usedtime: now})
+        if updated == 0:
+            session.rollback()
+            return await sendMessage(msg, '⛔ 线路码已被使用，请勿重复兑换。', timer=60)
+        user.line_pro_ex = line_pro_ex
+        user.line_pro_trial_used = 1
+        session.commit()
+
+    masked_code = register_code[:-7] + "░" * 7
+    await sendMessage(
+        msg,
+        f'🎊 直连Pro已激活 {days} 天\n'
+        f'📅 到期时间：**{line_pro_status_text(line_pro_ex)}**\n\n'
+        f'现在可在「直连切线」中查看并切换 Pro 线路。'
+    )
+    LOGGER.info(
+        f"【线路码】：{msg.from_user.first_name}[{msg.chat.id}] 使用了 {masked_code}，"
+        f"直连Pro到期时间：{line_pro_ex}"
+    )
+
+
+async def rgs_code(_, msg, register_code):
     data = sql_get_emby(tg=msg.from_user.id)
     if not data: return await sendMessage(msg, "请先点击 /start ，否则无法使用注册码")
     embyid = data.embyid
@@ -28,6 +74,10 @@ async def rgs_code(_, msg, register_code):
     if not code_info:
         return await sendMessage(msg, "⛔ **你输入了一个错误de注册码，请确认好重试。**", timer=60)
     code_type = code_info[0]
+    if code_type == 'l':
+        return await _redeem_line_code(msg, register_code, data)
+    if _open.stat:
+        return await sendMessage(msg, "🤧 自由注册开启下无法使用注册码。")
     if code_type == 'a':
         if embyid:
             return await sendMessage(msg, "🔔 **已有账号**\n活动码只能无账号的情况下使用哦~", timer=60)

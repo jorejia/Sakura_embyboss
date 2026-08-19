@@ -23,6 +23,10 @@ class Code(Base):
 Code.__table__.create(bind=engine, checkfirst=True)
 
 
+def _non_line_code_condition():
+    return or_(Code.invite != 'l', Code.invite.is_(None))
+
+
 def sql_add_code(code_list: list, tg: int, us: int, invite: str):
     """ 批量添加记录，如果code已存在则忽略 """
     with Session() as session:
@@ -59,17 +63,54 @@ def sql_get_code(code):
             return None
 
 
+def sql_get_activity_code_usage(codes):
+    """批量查询活动码的最新使用状态。"""
+    if not codes:
+        return {}
+    with Session() as session:
+        try:
+            records = session.query(Code).filter(
+                Code.code.in_(codes),
+                Code.invite == 'a'
+            ).all()
+            return {record.code: record.used is not None for record in records}
+        except Exception:
+            return None
+
+
+def sql_delete_unused_code(code):
+    """删除一条仍未使用的注册码。
+
+    :return: deleted / used / not_found / error
+    """
+    with Session() as session:
+        try:
+            record = session.query(Code).filter(Code.code == code).with_for_update().first()
+            if record is None:
+                return 'not_found'
+            if record.used is not None:
+                return 'used'
+            session.delete(record)
+            session.commit()
+            return 'deleted'
+        except Exception:
+            session.rollback()
+            return 'error'
+
+
 @cache.memoize(ttl=120)
 def sql_count_code(tg: int = None):
     with Session() as session:
         if tg is None:
             try:
                 # 查询used不为空的数量
-                used_count = session.query(func.count()).filter(Code.used != None).scalar()
+                used_count = session.query(func.count()).filter(Code.used != None).filter(
+                    _non_line_code_condition()).scalar()
                 # 查询used为空时，us=30，90，180，360的数量
                 us_list = [30, 90, 180, 365]  # 创建一个列表，存储us的值
                 tg_mon, tg_sea, tg_half, tg_year = [
-                    session.query(func.count()).filter(Code.used == None).filter(Code.us == us).scalar() for us in
+                    session.query(func.count()).filter(Code.used == None).filter(Code.us == us).filter(
+                        _non_line_code_condition()).scalar() for us in
                     us_list]  # 用一个列表推导式来查询数量
                 return used_count, tg_mon, tg_sea, tg_half, tg_year
             except Exception as e:
@@ -77,11 +118,12 @@ def sql_count_code(tg: int = None):
                 return None
         else:
             try:
-                used_count = session.query(func.count()).filter(Code.used != None).filter(Code.tg == tg).scalar()
+                used_count = session.query(func.count()).filter(Code.used != None).filter(Code.tg == tg).filter(
+                    _non_line_code_condition()).scalar()
                 us_list = [30, 90, 180, 365]
                 tg_mon, tg_sea, tg_half, tg_year = [
                     session.query(func.count()).filter(Code.used == None).filter(Code.us == us).filter(
-                        Code.tg == tg).scalar() for us in
+                        Code.tg == tg).filter(_non_line_code_condition()).scalar() for us in
                     us_list]
                 return used_count, tg_mon, tg_sea, tg_half, tg_year
             except Exception as e:
@@ -90,13 +132,26 @@ def sql_count_code(tg: int = None):
 
 
 @cache.memoize(ttl=120)
+def sql_count_line_code(tg: int = None):
+    with Session() as session:
+        query = session.query(Code).filter(Code.invite == 'l')
+        if tg is not None:
+            query = query.filter(Code.tg == tg)
+        unused_count = query.filter(Code.used.is_(None)).count()
+        used_count = query.filter(Code.used.isnot(None)).count()
+        return used_count, unused_count
+
+
+@cache.memoize(ttl=120)
 def sql_count_p_code(tg_id, us):
     with Session() as session:
         try:
             if us == 0:
-                p = session.query(func.count()).filter(Code.used != None).filter(Code.tg == tg_id).scalar()
+                p = session.query(func.count()).filter(Code.used != None).filter(Code.tg == tg_id).filter(
+                    _non_line_code_condition()).scalar()
             else:
-                p = session.query(func.count()).filter(Code.us == us).filter(Code.tg == tg_id).scalar()
+                p = session.query(func.count()).filter(Code.us == us).filter(Code.tg == tg_id).filter(
+                    _non_line_code_condition()).scalar()
             if p == 0:
                 return None, 1
             i = math.ceil(p / 30)
@@ -108,12 +163,14 @@ def sql_count_p_code(tg_id, us):
                 if us != 0:
                     # 查询us和tg匹配的记录，按tg升序，usedtime降序排序，分页查询
                     result = session.query(Code.tg, Code.code, Code.used, Code.usedtime).filter(Code.us == us).filter(
-                        Code.tg == tg_id).filter(Code.used == None).order_by(Code.tg.asc(), Code.usedtime.desc()).limit(
+                        Code.tg == tg_id).filter(Code.used == None).filter(_non_line_code_condition()).order_by(
+                        Code.tg.asc(), Code.usedtime.desc()).limit(
                         30).offset(d).all()
                 else:
                     result = session.query(Code.tg, Code.code, Code.used, Code.usedtime, Code.us).filter(
                         Code.used != None).filter(
-                        Code.tg == tg_id).order_by(Code.tg.asc(), Code.usedtime.desc()).limit(30).offset(d).all()
+                        Code.tg == tg_id).filter(_non_line_code_condition()).order_by(
+                        Code.tg.asc(), Code.usedtime.desc()).limit(30).offset(d).all()
                 x = ''
                 e = 1 if d == 0 else d + 1
                 for link in result:

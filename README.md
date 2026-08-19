@@ -18,6 +18,33 @@
 
 > **声明：本项目仅供学习交流使用，仅作为辅助工具借助tg平台方便用户管理自己的媒体库成员，对用户的其他行为及内容毫不知情**
 
+## 线路与 Pro 线路配置
+
+在 `config.json` 中修改 `default_line_id` 和 `line_options`。每条线路的 `id` 就是写入
+Sidecar `emby_user.use_line` 的数字；`pro: true` 表示该线路只对直连 Pro 用户显示和开放。
+可以同时标记任意多条 Pro 线路，例如：
+
+```json
+"default_line_id": 1,
+"line_options": [
+  {"id": 1, "name": "直连一线", "pro": false},
+  {"id": 2, "name": "直连二线", "pro": false},
+  {"id": 3, "name": "直连三线 Pro", "pro": true},
+  {"id": 4, "name": "直连四线 Pro", "pro": true},
+  {"id": 7, "name": "海外 Pro", "pro": true}
+]
+```
+
+对应的 OpenResty `pro_line_auth.lua` 必须配置相同编号：
+
+```lua
+pro_line_ids = { 3, 4, 7 },
+```
+
+Sakura 修改 `config.json` 后需要重启 Bot；OpenResty 修改 Lua 配置后需要 reload。
+`default_line_id` 指向的线路是 Pro 到期时切回的默认线路，应保持为非 Pro。
+线路编号不要求连续，但不能重复。
+
 ## 💐 Our Contributors
 
 <a href="https://github.com/berry8838/Sakura_embyboss/graphs/contributors">

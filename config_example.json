@@ -17,6 +17,29 @@
   "emby_url": "http://255.255.255.255:8096",
   "sidecar_url": "http://255.255.255.255:8097",
   "emby_line": "susuyyds.com",
+  "default_line_id": 1,
+  "line_options": [
+    {
+      "id": 1,
+      "name": "直连一线",
+      "pro": false
+    },
+    {
+      "id": 2,
+      "name": "直连二线",
+      "pro": false
+    },
+    {
+      "id": 3,
+      "name": "直连三线 Pro",
+      "pro": true
+    },
+    {
+      "id": 4,
+      "name": "直连四线 Pro",
+      "pro": true
+    }
+  ],
   "db_host": "localhost",
   "db_user": "",
   "db_pwd": "",
@@ -63,6 +86,7 @@
     "dayplayrank": false,
     "weekplayrank": false,
     "check_ex": true,
+    "check_ex_paused": false,
     "low_activity": false,
     "backup_db": false
   },

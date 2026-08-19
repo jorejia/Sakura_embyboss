@@ -1,8 +1,9 @@
 from pykeyboard import InlineKeyboard, InlineButton
 from pyrogram.types import InlineKeyboardMarkup
 from pyromod.helpers import ikb, array_chunk
-from bot import chanel, main_group, bot_name, extra_emby_libs, _open, user_buy, sakura_b, schedall
+from bot import chanel, main_group, bot_name, extra_emby_libs, _open, user_buy, sakura_b, schedall, line_options
 from bot.func_helper.emby import emby
+from bot.func_helper.line_access import configured_line, visible_lines
 from bot.func_helper.utils import judge_admins, members_info, convert_to_beijing_time
 
 """start面板 ↓"""
@@ -48,7 +49,7 @@ def members_ikb(emby=False) -> InlineKeyboardMarkup:
                     [('♻️ 主界面', 'back_start')]])
     else:
         return ikb(
-            [[('👑 注册Emby账号', 'create')], [('⭕ 从被封禁TG换绑', 'changetg')],
+            [[('👑 注册Emby账号', 'create')], [('⭕ TG改绑（注销/到期封存）', 'changetg')],
              [('♻️ 主界面', 'back_start')]])
 
 
@@ -103,24 +104,23 @@ def parental_rating_label(value: int) -> str:
     return mapping.get(value, f'未知({value})')
 
 
-def line_menu_ikb(current_value: int):
+def line_menu_ikb(current_value: int, has_pro: bool = False, trial_available: bool = False):
     def label(value: int, text: str) -> str:
         prefix = '✅ ' if current_value == value else ''
         return f'{prefix}{text}'
 
-    return ikb([
-        [[label(1, '直连一线'), 'line_set:1'], [label(2, '直连二线'), 'line_set:2'], [label(3, '直连三线'), 'line_set:3']],
-        [('🔙 返回', 'members')]
-    ])
+    buttons = [[label(option.id, f'💎 {option.name}' if option.pro else option.name), f'line_set:{option.id}']
+               for option in visible_lines(line_options, has_pro)]
+    rows = array_chunk(buttons, 2)
+    if trial_available:
+        rows.append([('🎁 免费试用 Pro 线路 1 天', 'line_pro_trial')])
+    rows.append([('🔙 返回', 'members')])
+    return ikb(rows)
 
 
 def line_label(value: int) -> str:
-    mapping = {
-        1: '直连一线',
-        2: '直连二线',
-        3: '直连三线'
-    }
-    return mapping.get(value, f'未知({value})')
+    option = configured_line(line_options, value)
+    return option.name if option else f'未知({value})'
 
 
 
@@ -161,7 +161,8 @@ def checkin_menu_ikb(options=None) -> InlineKeyboardMarkup:
 """admins ↓"""
 
 gm_ikb_content = ikb([[('⭕ 注册状态', 'open-menu'), ('🎁 生成活动码', 'cr_activity'), ('🎟️ 生成注册', 'cr_link')],
-                      [('💊 查询注册', 'ch_link'), ('🏷️ 别名设置', 'alias_setting'), ('🏬 兑换设置', 'set_renew')],
+                      [('💎 生成线路码', 'cr_line'), ('💊 查询注册', 'ch_link'), ('🏷️ 别名设置', 'alias_setting')],
+                      [('🏬 兑换设置', 'set_renew')],
                       [('🌏 定时', 'schedall'), ('🕹️ 主界面', 'back_start'), ('其他 🪟', 'back_config')]])
 
 
@@ -174,40 +175,22 @@ back_free_ikb = ikb([[('🔙 返回上一级', 'open-menu')]])
 back_open_menu_ikb = ikb([[('🪪 重新定时', 'open_timing'), ('🔙 注册状态', 'open-menu')]])
 re_cr_link_ikb = ikb([[('♻️ 继续创建', 'cr_link'), ('🎗️ 返回主页', 'manage')]])
 re_cr_activity_ikb = ikb([[('♻️ 继续创建', 'cr_activity'), ('🎗️ 返回主页', 'manage')]])
+re_cr_line_ikb = ikb([[('♻️ 继续创建', 'cr_line'), ('🎗️ 返回主页', 'manage')]])
 close_it_ikb = ikb([[('❌ - Close', 'closeit')]])
+activity_usage_ikb = ikb([[('🔍 查询使用', 'activity_usage'), ('❌ - Close', 'closeit')]])
 
 
-def ch_link_ikb(ls: list) -> InlineKeyboardMarkup:
-    lines = array_chunk(ls, 2)
-    lines.append([["💫 回到首页", "manage"]])
-    return ikb(lines)
+def code_query_ikb(code=None, can_delete=False) -> InlineKeyboardMarkup:
+    rows = []
+    if can_delete and code:
+        rows.append([('🗑 删除注册码', f'rcode_delete:{code}')])
+    rows.append([('🔍 继续查询', 'ch_link'), ('💫 回到首页', 'manage')])
+    return ikb(rows)
 
 
 def alias_setting_ikb(item_id) -> InlineKeyboardMarkup:
     return ikb([[('🧹 清空别名', f'alias_clear-{item_id}'), ('✏️ 修改别名', f'alias_modify-{item_id}')],
                 [('🔙 返回', 'manage')]])
-
-
-def date_ikb(i) -> InlineKeyboardMarkup:
-    return ikb([[('🌘 - 月', f'register_mon_{i}'), ('🌗 - 季', f'register_sea_{i}'),
-                 ('🌖 - 半年', f'register_half_{i}')],
-                [('🌕 - 年', f'register_year_{i}'), ('🎟️ - 已用', f'register_used_{i}')], [('🔙 - 返回', 'ch_link')]])
-
-
-# 翻页按钮
-async def cr_paginate(i, j, n) -> InlineKeyboardMarkup:
-    """
-    :param i: 总数
-    :param j: 目前
-    :param n: mode 可变项
-    :return:
-    """
-    keyboard = InlineKeyboard()
-    keyboard.paginate(i, j, 'pagination_keyboard:{number}' + f'-{n}')
-    keyboard.row(
-        InlineButton('❌ - Close', 'closeit')
-    )
-    return keyboard
 
 
 async def users_iv_button(i, j, tg) -> InlineKeyboardMarkup:
@@ -301,12 +284,13 @@ async def cr_kk_ikb(uid, first):
     if data is None:
         text += f'**· 🆔 TG** ：[{first}](tg://user?id={uid}) [`{uid}`]\n请点击 /start 唤起菜单'
     else:
-        name, lv, ex, us, embyid, pwd2, douban = data
+        name, lv, ex, us, embyid, pwd2, douban, line_pro = data
         if douban is None:
             douban = '未绑定'
         if name != '无账户信息':
             ban = "🌟 解除禁用" if lv == "**到期封存**" else '💢 禁用账户'
             keyboard = [[ban, f'user_ban-{uid}'], ['⚠️ 删除账户', f'closeemby-{uid}']]
+            keyboard.append(['🧹 解除直连Pro', f'line_pro_revoke-{uid}'])
             if len(extra_emby_libs) > 0:
                 success, rep = emby.user(embyid=embyid)
                 if success:
@@ -337,7 +321,8 @@ async def cr_kk_ikb(uid, first):
                 f"**· 🍥 当前{sakura_b}** | {us[1]}\n" \
                 f"**· ⏰ 未用天数** | {us[0]}\n" \
                 f"**· 💠 账号名称** | {name}\n" \
-                f"**· 🚨 到期时间** | **{ex}**\n"
+                f"**· 🚨 到期时间** | **{ex}**\n" \
+                f"**· 💎 直连Pro** | **{line_pro}**\n"
         text += text1
         keyboard.extend([['🚫 踢出并封禁', f'fuckoff-{uid}'], ['❌ 删除消息', f'closeit']])
         lines = array_chunk(keyboard, 2)
@@ -363,6 +348,7 @@ def sched_buttons():
     dayplayrank = '✅' if schedall.dayplayrank else '❎'
     weekplayrank = '✅' if schedall.weekplayrank else '❎'
     check_ex = '✅' if schedall.check_ex else '❎'
+    check_ex_pause_text = '▶️ 恢复到期检测' if schedall.check_ex_paused else '⏸️ 暂停到期检测'
     low_activity = '✅' if schedall.low_activity else '❎'
     backup_db = '✅' if schedall.backup_db else '❎'
     keyboard = InlineKeyboard(row_width=2)
@@ -371,6 +357,7 @@ def sched_buttons():
                  InlineButton(f'{dayplayrank} 看片日榜', f'sched-dayplayrank'),
                  InlineButton(f'{weekplayrank} 看片周榜', f'sched-weekplayrank'),
                  InlineButton(f'{check_ex} 到期保号', f'sched-check_ex'),
+                 InlineButton(check_ex_pause_text, 'expiry_pause_toggle'),
                  InlineButton(f'{low_activity} 活跃保号', f'sched-low_activity'),
                  InlineButton(f'{backup_db} 自动备份数据库', f'sched-backup_db'),
                  )

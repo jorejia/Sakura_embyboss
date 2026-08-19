@@ -40,6 +40,8 @@ emby_line = config.emby_line
 emby_block = config.emby_block
 extra_emby_libs = config.extra_emby_libs
 another_line = config.another_line
+default_line_id = config.default_line_id
+line_options = config.line_options
 # # 数据库
 db_host = config.db_host
 db_user = config.db_user

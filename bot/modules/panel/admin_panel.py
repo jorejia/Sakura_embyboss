@@ -7,17 +7,17 @@ import asyncio
 from pyrogram import filters
 from pyrogram.errors import BadRequest
 
-from bot import bot, _open, save_config, bot_photo, LOGGER, bot_name, admins, owner
+from bot import bot, _open, save_config, bot_photo, LOGGER, bot_name
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import admins_on_filter
-from bot.schemas import ExDate
-from bot.sql_helper.sql_code import sql_count_code, sql_count_p_code
-from bot.sql_helper.sql_emby import sql_count_emby
+from bot.sql_helper.sql_code import sql_delete_unused_code, sql_get_code, sql_get_activity_code_usage
+from bot.sql_helper.sql_emby import sql_count_emby, sql_count_registered_slots
 from bot.func_helper.fix_bottons import gm_ikb_content, open_menu_ikb, gog_rester_ikb, back_open_menu_ikb, \
     back_free_ikb, \
-    re_cr_link_ikb, re_cr_activity_ikb, close_it_ikb, ch_link_ikb, date_ikb, cr_paginate, cr_renew_ikb, alias_setting_ikb
+    re_cr_link_ikb, re_cr_activity_ikb, re_cr_line_ikb, close_it_ikb, activity_usage_ikb, code_query_ikb, \
+    cr_renew_ikb, alias_setting_ikb
 from bot.func_helper.msg_utils import callAnswer, editMessage, sendPhoto, callListen, deleteMessage, sendMessage
-from bot.func_helper.utils import open_check, cr_link_one, cr_link_activity
+from bot.func_helper.utils import open_check, cr_link_one, cr_link_activity, cr_link_line
 
 
 @bot.on_callback_query(filters.regex('manage') & admins_on_filter)
@@ -27,10 +27,11 @@ async def gm_ikb(_, call):
     stat = "True" if stat else "False"
     allow_code = 'True' if allow_code else 'False'
     timing = 'Turn off' if timing == 0 else str(timing) + ' min'
-    tg, emby, white = sql_count_emby()
+    tg, emby, white, line_pro = sql_count_emby()
     gm_text = f'⚙️ 欢迎您，亲爱的管理员 {call.from_user.first_name}\n\n· ®️ 注册状态 | **{stat}**\n· ⏳ 定时注册 | **{timing}**\n' \
-              f'· 🔖 注册码续期 | **{allow_code}**\n' \
-              f'· 🎫 总注册限制 | **{all_user}**\n· 🎟️ 已注册人数 | **{emby}** • WL **{white}**\n· 🤖 bot使用人数 | {tg}'
+               f'· 🔖 注册码续期 | **{allow_code}**\n' \
+               f'· 🎫 总注册限制 | **{all_user}**\n· 🎟️ 已注册人数 | **{emby}** • WL **{white}**\n' \
+               f'· 💎 有效直连Pro | **{line_pro}**\n· 🤖 bot使用人数 | {tg}'
 
     await editMessage(call, gm_text, buttons=gm_ikb_content)
 
@@ -63,14 +64,15 @@ async def open_menu(_, call):
     await callAnswer(call, '®️ register面板')
     # [开关，注册总数，定时注册] 此间只对emby表中tg用户进行统计
     stat, all_user, tem, timing, allow_code = await open_check()
-    tg, emby, white = sql_count_emby()
+    tg, emby, white, line_pro = sql_count_emby()
     openstats = '✅' if stat else '❎'  # 三元运算
     timingstats = '❎' if timing == 0 else '✅'
     text = f'⚙ **注册状态设置**：\n\n- 自由注册即定量方式，定时注册既定时又定量，将自动转发消息至群组，再次点击按钮可提前结束并报告。\n' \
            f'- **注册总人数限制 {all_user}**'
     await editMessage(call, text, buttons=open_menu_ikb(openstats, timingstats))
-    if tem != emby:
-        _open.tem = emby
+    registered_slots = sql_count_registered_slots()
+    if registered_slots is not None and tem != registered_slots:
+        _open.tem = registered_slots
         save_config()
 
 
@@ -80,7 +82,7 @@ async def open_stats(_, call):
     if timing != 0:
         return await callAnswer(call, "🔴 目前正在运行定时注册。\n无法调用，请再次点击，【定时注册】关闭状态", True)
 
-    tg, emby, white = sql_count_emby()
+    tg, emby, white, line_pro = sql_count_emby()
     if stat:
         _open.stat = False
         save_config()
@@ -138,7 +140,7 @@ async def open_timing(_, call):
         except ValueError:
             await editMessage(call, "🚫 请检查数字填写是否正确。\n`[时长min] [总人数]`", buttons=back_open_menu_ikb)
         else:
-            tg, emby, white = sql_count_emby()
+            tg, emby, white, line_pro = sql_count_emby()
             sur = _open.all_user - emby
             await asyncio.gather(sendPhoto(call, photo=bot_photo,
                                            caption=f'🫧 管理员 {call.from_user.first_name} 已开启 **定时注册**\n\n'
@@ -288,12 +290,101 @@ async def cr_activity(_, call):
         links = await cr_link_activity(call.from_user.id, times, count, days, method)
         if links is None:
             return await editMessage(call, '⚠️ 数据库插入失败，请检查数据库。', buttons=re_cr_activity_ikb)
-        links = f"🎯 {bot_name}已为您生成了 **{days}天** 活动码 {count} 个\n\n" + links
-        chunks = [links[i:i + 4096] for i in range(0, len(links), 4096)]
+        header = f"🎯 {bot_name}已为您生成了 **{days}天** 活动码 {count} 个\n\n"
+        chunks = []
+        chunk = header
+        # 预留状态文字的长度，避免查询后超过 Telegram 的 4096 字符限制。
+        for line in links.splitlines():
+            candidate = f'{chunk}{line}\n'
+            if len(candidate) > 3200 and chunk != header:
+                chunks.append(chunk.rstrip())
+                chunk = f'{header}{line}\n'
+            else:
+                chunk = candidate
+        if chunk != header:
+            chunks.append(chunk.rstrip())
         for chunk in chunks:
-            await sendMessage(content, chunk, buttons=close_it_ikb)
+            await sendMessage(content, chunk, buttons=activity_usage_ikb)
         await editMessage(call, f'📂 {bot_name}已为 您 生成了 {count} 个 {days} 天活动码', buttons=re_cr_activity_ikb)
         LOGGER.info(f"【admin】：{bot_name}已为 {content.from_user.id} 生成了 {count} 个 {days} 天活动码")
+
+
+def _activity_code_line(line):
+    """从活动码结果的一行中提取原始码，兼容 code 和深链接模式。"""
+    display = line.split('  —  ', 1)[0].strip().strip('`')
+    if not display or display.startswith('🎯'):
+        return None, None
+    if '?start=' in display:
+        code = display.split('?start=', 1)[1].split('&', 1)[0].strip()
+    else:
+        code = display
+    return display, code
+
+
+@bot.on_callback_query(filters.regex(r'^activity_usage$') & admins_on_filter)
+async def activity_usage(_, call):
+    lines = (call.message.text or '').splitlines()
+    entries = [_activity_code_line(line) for line in lines]
+    entries = [(display, code) for display, code in entries if code]
+    if not entries:
+        return await callAnswer(call, '⚠️ 未在当前消息中找到活动码', True)
+
+    usage = sql_get_activity_code_usage([code for _, code in entries])
+    if usage is None:
+        return await callAnswer(call, '⚠️ 数据库查询失败', True)
+
+    header = next((line for line in lines if line.strip().startswith('🎯')), '🎯 活动码使用情况')
+    result_lines = [header, '']
+    for display, code in entries:
+        if code not in usage:
+            status = '⚠️ 已不存在'
+        elif usage[code]:
+            status = '✅ 已使用'
+        else:
+            status = '⭕ 未使用'
+        result_lines.append(f'{display}  —  {status}')
+
+    await callAnswer(call, '♻️ 已刷新最新使用情况')
+    await editMessage(call, '\n'.join(result_lines), buttons=activity_usage_ikb)
+
+
+@bot.on_callback_query(filters.regex(r'^cr_line$') & admins_on_filter)
+async def cr_line(_, call):
+    await callAnswer(call, '✔️ 创建线路码')
+    send = await editMessage(call,
+                             f'💎 请回复创建 [天数] [数量] [模式]\n\n'
+                             f'**天数**：月30，季90，半年180，年365\n'
+                             f'**模式**： link -深链接 | code -码\n'
+                             f'**示例**：`30 20 code` 记作 20 个 30 天线路码\n'
+                             f'__取消本次操作，请 /cancel__')
+    if send is False:
+        return
+
+    content = await callListen(call, 120, buttons=re_cr_line_ikb)
+    if content is False:
+        return
+    if content.text == '/cancel':
+        await content.delete()
+        return await editMessage(call, '⭕ 您已经取消操作了。', buttons=re_cr_line_ikb)
+    try:
+        await content.delete()
+        times, count, method = content.text.split()
+        count = int(count)
+        days = int(times)
+        if days <= 0 or count <= 0 or method not in ('code', 'link'):
+            raise ValueError
+    except (ValueError, IndexError):
+        return await editMessage(call, '⚠️ 检查输入，有误。', buttons=re_cr_line_ikb)
+
+    links = await cr_link_line(call.from_user.id, times, count, days, method)
+    if links is None:
+        return await editMessage(call, '⚠️ 数据库插入失败，请检查数据库。', buttons=re_cr_line_ikb)
+    links = f"🎯 {bot_name}已为您生成 **{days}天** 线路码 {count} 个\n\n" + links
+    chunks = [links[i:i + 4096] for i in range(0, len(links), 4096)]
+    for chunk in chunks:
+        await sendMessage(content, chunk, buttons=close_it_ikb)
+    await editMessage(call, f'📂 已生成 {count} 个 {days} 天线路码', buttons=re_cr_line_ikb)
+    LOGGER.info(f"【admin】：{bot_name}已为 {call.from_user.id} 生成了 {count} 个 {days} 天线路码")
 
 
 @bot.on_callback_query(filters.regex('alias_setting') & admins_on_filter)
@@ -373,65 +464,88 @@ async def alias_modify(_, call):
     return await _show_alias_panel(call, item_id)
 
 
-# 检索
-@bot.on_callback_query(filters.regex('ch_link') & admins_on_filter)
+def _code_type_text(invite):
+    return {
+        None: '普通注册码',
+        'n': '普通注册码',
+        'y': '邀请码',
+        'a': '活动码',
+        'l': '直连Pro线路码',
+    }.get(invite, f'未知类型（{invite}）')
+
+
+def _code_info_text(record):
+    used = record.used is not None
+    text = (
+        f'🎫 **注册码查询**\n\n'
+        f'· 码 | `{record.code}`\n'
+        f'· 性质 | **{_code_type_text(record.invite)}**\n'
+        f'· 时长 | **{record.us} 天**\n'
+        f'· 生成者 | [{record.tg}](tg://user?id={record.tg})\n'
+        f'· 使用状态 | **{"已使用" if used else "未使用"}**'
+    )
+    if used:
+        used_time = record.usedtime.strftime('%Y-%m-%d %H:%M:%S') if record.usedtime else '未记录'
+        text += (
+            f'\n· 使用者 | [{record.used}](tg://user?id={record.used})'
+            f'\n· 使用时间 | **{used_time}**'
+        )
+    return text
+
+
+# 查询任意一个注册码
+@bot.on_callback_query(filters.regex(r'^ch_link$') & admins_on_filter)
 async def ch_link(_, call):
-    await callAnswer(call, '🔍 查看管理们注册码...时长会久一点', True)
-    a, b, c, d, f = sql_count_code()
-    text = f'**🎫 常用code数据：\n• 已使用 - {a}\n• 月码 - {b}   | • 季码 - {c} \n• 半年码 - {d}  | • 年码 - {f}**'
-    ls = []
-    admins.append(owner)
-    for i in admins:
-        name = await bot.get_chat(i)
-        a, b, c, d, f = sql_count_code(i)
-        text += f'\n👮🏻`{name.first_name}`: 月/{b}，季/{c}，半年/{d}，年/{f}，已用/{a}'
-        f = [f"🔎 {name.first_name}", f"ch_admin_link-{i}"]
-        ls.append(f)
-    admins.remove(owner)
-    keyboard = ch_link_ikb(ls)
-    text += '\n详情查询 👇'
+    await callAnswer(call, '🔍 查询注册码')
+    await editMessage(
+        call,
+        '🔍 **查询注册码**\n\n请在 120 秒内发送需要查询的完整码\n取消请发送 /cancel',
+        buttons=code_query_ikb(),
+    )
+    content = await callListen(call, 120, buttons=code_query_ikb())
+    if content is False:
+        return
 
-    await editMessage(call, text, buttons=keyboard)
+    code = content.text.strip().strip('`')
+    await content.delete()
+    if code == '/cancel':
+        return await editMessage(call, '✅ 已取消注册码查询', buttons=gm_ikb_content)
+    if not code:
+        return await editMessage(call, '⚠️ 注册码不能为空', buttons=code_query_ikb())
 
+    record = sql_get_code(code)
+    if record is None:
+        return await editMessage(call, f'❌ 未找到注册码 `{code}`', buttons=code_query_ikb())
 
-@bot.on_callback_query(filters.regex('ch_admin_link'))
-async def ch_admin_link(client, call):
-    i = int(call.data.split('-')[1])
-    if call.from_user.id != owner and call.from_user.id != i:
-        return await callAnswer(call, '🚫 你怎么偷窥别人呀! 你又不是owner', True)
-    await callAnswer(call, f'💫 管理员 {i} 的注册码')
-    a, b, c, d, f = sql_count_code(i)
-    name = await client.get_chat(i)
-    text = f'**🎫 [{name.first_name}-{i}](tg://user?id={i})：\n• 已使用 - {a}\n• 月码 - {b}   | • 季码 - {c} \n• 半年码 - {d}  | • 年码 - {f}**'
-    await editMessage(call, text, date_ikb(i))
+    await editMessage(
+        call,
+        _code_info_text(record),
+        buttons=code_query_ikb(record.code, can_delete=record.used is None),
+    )
 
 
-@bot.on_callback_query(
-    filters.regex('register_mon') | filters.regex('register_sea')
-    | filters.regex('register_half') | filters.regex('register_year') | filters.regex('register_used'))
-async def buy_mon(_, call):
-    await call.answer('✅ 显示注册码')
-    cd, times, u = call.data.split('_')
-    n = getattr(ExDate(), times)
-    a, i = sql_count_p_code(u, n)
-    if a is None:
-        x = '**空**'
-    else:
-        x = a[0]
-    first = await bot.get_chat(u)
-    keyboard = await cr_paginate(i, 1, n)
-    await sendMessage(call, f'🔎当前 {first.first_name} - **{n}**天，检索出以下 **{i}**页：\n\n{x}', keyboard)
-
-
-# 检索翻页
-@bot.on_callback_query(filters.regex('pagination_keyboard'))
-async def paginate_keyboard(_, call):
-    j, mode = map(int, call.data.split(":")[1].split('-'))
-    await callAnswer(call, f'好的，将为您翻到第 {j} 页')
-    a, b = sql_count_p_code(call.from_user.id, mode)
-    keyboard = await cr_paginate(b, j, mode)
-    text = a[j-1]
-    await editMessage(call, f'🔎当前模式- **{mode}**天，检索出以下 **{b}**页链接：\n\n{text}', keyboard)
+@bot.on_callback_query(filters.regex(r'^rcode_delete:') & admins_on_filter)
+async def delete_unused_code(_, call):
+    code = call.data.split(':', 1)[1]
+    result = sql_delete_unused_code(code)
+    if result == 'deleted':
+        LOGGER.info(f'【删除注册码】管理员 {call.from_user.id} 删除了未使用码 {code}')
+        await callAnswer(call, '✅ 注册码已删除', True)
+        return await editMessage(
+            call,
+            f'🗑 注册码 `{code}` 已从数据库删除',
+            buttons=code_query_ikb(),
+        )
+    if result == 'used':
+        await callAnswer(call, '❌ 该码已被使用，不能删除', True)
+        record = sql_get_code(code)
+        if record is not None:
+            return await editMessage(call, _code_info_text(record), buttons=code_query_ikb())
+        return
+    if result == 'not_found':
+        await callAnswer(call, '❌ 该码已不存在', True)
+        return await editMessage(call, f'❌ 注册码 `{code}` 已不存在', buttons=code_query_ikb())
+    return await callAnswer(call, '❌ 数据库删除失败，请稍后重试', True)
 
 
 @bot.on_callback_query(filters.regex('set_renew'))

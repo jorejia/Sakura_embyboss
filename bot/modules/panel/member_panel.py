@@ -12,11 +12,14 @@ import random
 from datetime import timedelta, datetime
 
 from pyrogram.errors import BadRequest
+from sqlalchemy import and_
 from bot.schemas import ExDate, Yulv
 from bot import bot, LOGGER, _open, emby_line, sakura_b, ranks, group, extra_emby_libs, config, user_buy, \
-    bot_name
+    bot_name, default_line_id, line_options
 from pyrogram import filters
 from bot.func_helper.emby import emby
+from bot.func_helper.line_access import configured_line, line_pro_active, line_pro_status_text, line_requires_pro, \
+    line_pro_trial_available
 from bot.func_helper.filters import user_in_group_on_filter
 from bot.func_helper.utils import members_info, tem_alluser, cr_link_one, cr_link_invite
 from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create_ikb, del_me_ikb, re_delme_ikb, \
@@ -28,7 +31,8 @@ from bot.func_helper.msg_utils import callAnswer, editMessage, callListen, sendM
 from bot.modules.commands import p_start
 from bot.modules.commands.exchange import rgs_code
 from bot.sql_helper.sql_code import sql_count_c_code
-from bot.sql_helper.sql_emby import sql_get_emby, sql_update_emby, Emby, sql_delete_emby
+from bot.sql_helper.sql_emby import sql_claim_line_pro_trial, sql_get_emby, sql_update_emby, sql_rebind_emby, Emby, \
+    sql_delete_emby
 from bot.sql_helper.sql_emby2 import sql_get_emby2, sql_delete_emby2
 from bot.sql_helper import Session
 
@@ -102,7 +106,7 @@ async def members(_, call):
         return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start录入', True)
 
     await callAnswer(call, f"✅ 用户界面")
-    name, lv, ex, us, embyid, pwd2, douban = data
+    name, lv, ex, us, embyid, pwd2, douban, line_pro = data
     if douban is None:
         douban = '未绑定'
     text = f"▎__欢迎进入用户面板！{call.from_user.first_name}__\n\n" \
@@ -112,7 +116,8 @@ async def members(_, call):
            f"**· 🍥 当前{sakura_b}** | {us[1]}\n" \
            f"**· ⏰ 未用天数** | {us[0]}\n" \
            f"**· 💠 账号名称** | {name}\n" \
-           f"**· 🚨 到期时间** | **{ex}**\n"
+           f"**· 🚨 到期时间** | **{ex}**\n" \
+           f"**· 💎 直连Pro** | **{line_pro}**\n"
     if not embyid:
         await editMessage(call, text, members_ikb(False))
     else:
@@ -171,7 +176,8 @@ async def change_tg(_, call):
                              '🔰 **【更换绑定emby的tg】**\n'
                              '须知：\n'
                              '- **请确保您之前用其他tg账户注册过**\n'
-                             '- **请确保您注册的其他tg账户呈已注销状态**\n'
+                             '- **原TG已注销，或原账号已处于到期封存，均可改绑**\n'
+                             '- **改绑只更换TG，账号状态、到期时间、余额、设置和Pro权限等全部保留**\n'
                              '- **请确保输入正确的emby用户名，安全码/密码**\n\n'
                              '您有120s回复 `[emby用户名] [安全码(或密码)]`\n例如 `苏苏 5210` ，安全码和密码只需要任意其一，退出点 /cancel')
     if send is False:
@@ -196,9 +202,11 @@ async def change_tg(_, call):
 
         pwd = '空（直接回车）', 5210 if emby_pwd == 'None' else emby_pwd, emby_pwd
         e = sql_get_emby(tg=emby_name)
-        replace_tg=e.tg
+        if e is None or e.embyid is None:
+            return await editMessage(call, '⚠️ 未找到可改绑的 Emby 账号，请检查用户名。',
+                                     buttons=re_changetg_ikb)
 
-        if emby_pwd != e.pwd2:
+        if emby_pwd != e.pwd2 and not (e.lv == 'c' and emby_pwd == e.pwd):
             LOGGER.info(f'emby_pwd: {emby_pwd}, e.pwd2: {e.pwd2}')
             success, embyid = await emby.authority_account(call.from_user.id, emby_name, emby_pwd)
             if not success:
@@ -216,34 +224,45 @@ async def change_tg(_, call):
                     f'· 用户密码 | `{e.pwd}`\n' \
                     f'· 安全密码 | `{pwd[1]}`（仅发送一次）\n' \
                     f'· 到期时间 | `{e.ex}`'
+        else:
+            text = f'⭕ 到期封存账号 {emby_name} 的密码验证成功！\n\n' \
+                   f'· 用户名称 | `{emby_name}`\n' \
+                   f'· 用户密码 | `{e.pwd}`\n' \
+                   f'· 安全密码 | `{e.pwd2}`（仅发送一次）\n' \
+                   f'· 到期时间 | `{e.ex}`'
         f = None
         try:
             f = await bot.get_users(user_ids=e.tg)
         except Exception as ex:
             LOGGER.error(f'【TG改绑】 emby账户{emby_name} 通过tg api获取{e.tg}用户失败，原因：{ex}')
-        if f is not None and not f.is_deleted:
+        original_tg_active = f is not None and not f.is_deleted
+        if original_tg_active and e.lv != 'c':
             await sendMessage(call,
                                 f'⭕#TG改绑 **用户 [{call.from_user.id}](tg://user?id={call.from_user.id}) 正在试图改绑一个状态正常的[tg用户](tg://user?id={e.tg}) - {e.name}\n\n请管理员检查。**',
                                 send=True)
             return await editMessage(call,
-                                        f'⚠️ **你所要换绑的[tg](tg://user?id={e.tg}) - {e.tg}\n\n用户状态正常！无须换绑。**',
+                                        f'⚠️ **你所要改绑的[tg](tg://user?id={e.tg}) - {e.tg}\n\n'
+                                        f'原TG状态正常，且账号未处于到期封存，不可改绑。**',
                                         buttons=back_members_ikb)
-        if sql_update_emby(Emby.tg == call.from_user.id, embyid=e.embyid, name=e.name, pwd=e.pwd, pwd2=e.pwd2,
-                            lv=e.lv, cr=e.cr, ex=e.ex, iv=e.iv):
+        # 原 TG 仍活跃时，在数据库行锁内再次确认账号仍是到期封存，避免并发状态变化绕过条件。
+        rebind_result = sql_rebind_emby(
+            e.tg,
+            call.from_user.id,
+            require_archived=original_tg_active,
+        )
+        if rebind_result == 'success':
             await sendMessage(call,
                                 f'⭕#TG改绑 原emby账户 #{emby_name} \n\n已绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
                                 send=True)
             LOGGER.info(
                 f'【TG改绑】 emby账户 {emby_name} 绑定至 {call.from_user.first_name}-{call.from_user.id}')
             await editMessage(call, text)
+        elif rebind_result == 'source_not_archived':
+            await editMessage(call, '⚠️ 原账号已不是到期封存状态，本次改绑已取消。', back_members_ikb)
+            LOGGER.warning(f'【TG改绑】 emby账户{emby_name}在改绑时已不是到期封存状态。')
         else:
             await editMessage(call, '🍰 **【TG改绑】数据库处理出错，请联系闺蜜（管理）！**', back_members_ikb)
-            LOGGER.error(f"【TG改绑】 emby账户{emby_name} 绑定未知错误。")
-        if sql_delete_emby(tg=replace_tg):
-            LOGGER.info(f'【TG改绑】删除原账户 id{e.tg}, Emby:{e.name} 成功...')
-        else:
-            await editMessage(call, "🍰 **⭕#TG改绑 原账户删除错误，请联系闺蜜（管理）！**", back_members_ikb)
-            LOGGER.error(f"【TG改绑】删除原账户 id{e.tg}, Emby:{e.name} 失败...")
+            LOGGER.error(f"【TG改绑】 emby账户{emby_name} 绑定失败，数据库结果：{rebind_result}。")
 
 
 @bot.on_callback_query(filters.regex('bindtg') & user_in_group_on_filter)
@@ -560,12 +579,13 @@ def build_parental_menu_text(current_value: int) -> str:
     )
 
 
-def build_line_menu_text(current_value: int) -> str:
+def build_line_menu_text(current_value: int, line_pro_ex=None) -> str:
     return (
-        f'**🛣️  **\n\n'
+        f'**🛣️ 线路选择**\n\n'
         f'本功能只作为直连线路视频流的实时切换，不适用于海外线，'
         f'线路地址见用户手册\n\n'
         f'**当前线路**：{line_label(current_value)}\n\n'
+        f'**直连Pro**：{line_pro_status_text(line_pro_ex)}\n\n'
         f'说明：\n'
         f'- 切换不会中断当前播放的视频\n'
         f'- 切换后会立即作用于下一次播放的视频\n'
@@ -660,10 +680,48 @@ async def line_menu(_, call):
     if not ok:
         return await callAnswer(call, f'❌ 获取当前线路失败：{value}', True)
 
+    has_pro = line_pro_active(e.line_pro_ex)
+    if not has_pro and line_requires_pro(line_options, value):
+        ok, value = await emby.set_use_line(e.embyid, default_line_id)
+        if not ok:
+            return await callAnswer(call, f'❌ 直连Pro已到期，但切回默认线路失败：{value}', True)
+        sql_update_emby(and_(Emby.tg == e.tg, Emby.line_pro_ex <= datetime.now()), line_pro_ex=None)
+
     await asyncio.gather(
         callAnswer(call, '🛣️ 线路选择'),
-        editMessage(call, build_line_menu_text(value), buttons=line_menu_ikb(value))
+        editMessage(call, build_line_menu_text(value, e.line_pro_ex),
+                    buttons=line_menu_ikb(value, has_pro=has_pro,
+                                          trial_available=line_pro_trial_available(
+                                              e.line_pro_trial_used, e.line_pro_ex)))
     )
+
+
+@bot.on_callback_query(filters.regex(r'^line_pro_trial$') & user_in_group_on_filter)
+async def line_pro_trial(_, call):
+    e = sql_get_emby(tg=call.from_user.id)
+    if e is None:
+        return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start 录入', True)
+    if not e.embyid:
+        return await callAnswer(call, '❌ 需要先拥有 Emby 账号后才能试用 Pro 线路', True)
+    if e.line_pro_trial_used:
+        return await callAnswer(call, '❌ 每个用户只有一次试用机会，你已经使用过了', True)
+
+    ok, value = await emby.get_use_line(e.embyid)
+    if not ok:
+        return await callAnswer(call, f'❌ 获取当前线路失败：{value}', True)
+
+    expires_at = sql_claim_line_pro_trial(call.from_user.id)
+    if expires_at is None:
+        return await callAnswer(call, '❌ 每个用户只有一次试用机会，你已经使用过了', True)
+    if expires_at is False:
+        return await callAnswer(call, '❌ 试用资格领取失败，请稍后重试', True)
+
+    await asyncio.gather(
+        callAnswer(call, '🎉 已获得 1 天直连 Pro 试用', True),
+        editMessage(call, build_line_menu_text(value, expires_at),
+                    buttons=line_menu_ikb(value, has_pro=True, trial_available=False))
+    )
+    LOGGER.info(f'【直连Pro试用】用户 {call.from_user.id} 已领取，到期时间：{expires_at}')
 
 
 @bot.on_callback_query(filters.regex(r'line_set:\d+') & user_in_group_on_filter)
@@ -679,13 +737,23 @@ async def line_set(_, call):
     except (IndexError, ValueError):
         return await callAnswer(call, '❌ 线路参数错误', True)
 
+    option = configured_line(line_options, value)
+    if option is None:
+        return await callAnswer(call, '❌ 该线路未在 Bot 中配置', True)
+    has_pro = line_pro_active(e.line_pro_ex)
+    if option.pro and not has_pro:
+        return await callAnswer(call, '❌ 该线路仅限直连Pro用户，请先使用线路码激活', True)
+
     ok, result = await emby.set_use_line(e.embyid, value)
     if not ok:
         return await callAnswer(call, f'❌ 设置失败：{result}', True)
 
     await asyncio.gather(
         callAnswer(call, f'已切换到 {line_label(result)}', True),
-        editMessage(call, build_line_menu_text(result), buttons=line_menu_ikb(result))
+        editMessage(call, build_line_menu_text(result, e.line_pro_ex),
+                    buttons=line_menu_ikb(result, has_pro=has_pro,
+                                          trial_available=line_pro_trial_available(
+                                              e.line_pro_trial_used, e.line_pro_ex)))
     )
 
 

@@ -1,6 +1,7 @@
 import pytz
 
 from bot import bot, _open, save_config, owner, admins, bot_name, ranks, schedall, group
+from bot.func_helper.line_access import line_pro_status_text
 from bot.sql_helper.sql_code import sql_add_code
 from bot.sql_helper.sql_emby import sql_get_emby
 from cacheout import Cache
@@ -26,7 +27,7 @@ async def members_info(tg=None, name=None):
     基础资料 - 可传递 tg,emby_name
     :param tg: tg_id
     :param name: emby_name
-    :return: name, lv, ex, us, embyid, pwd2, douban
+    :return: name, lv, ex, us, embyid, pwd2, douban, line_pro
     """
     if tg is None:
         tg = name
@@ -49,7 +50,8 @@ async def members_info(tg=None, name=None):
             ex = ' __无需保号，放心食用__'
         else:
             ex = data.ex or '无账户信息'
-        return name, lv, ex, us, embyid, pwd2, douban
+        line_pro = line_pro_status_text(data.line_pro_ex)
+        return name, lv, ex, us, embyid, pwd2, douban, line_pro
 
 
 async def open_check():
@@ -152,6 +154,27 @@ async def cr_link_activity(tg: int, times, count, days: int, method: str):
             links += link
             i += 1
     if sql_add_code(code_list, tg, days, invite) is False:
+        return None
+    return links
+
+
+async def cr_link_line(tg: int, times, count, days: int, method: str):
+    """创建直连 Pro 线路码。"""
+    links = ''
+    code_list = []
+    i = 1
+    while i <= count:
+        p = await pwd_create(10)
+        uid = f'{ranks.logo}-PRO{times}-{p}'
+        code_list.append(uid)
+        if method == 'code':
+            links += f'`{uid}`\n'
+        elif method == 'link':
+            links += f't.me/{bot_name}?start={uid}\n'
+        else:
+            return None
+        i += 1
+    if sql_add_code(code_list, tg, days, 'l') is False:
         return None
     return links
 

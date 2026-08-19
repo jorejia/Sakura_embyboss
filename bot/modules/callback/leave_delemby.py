@@ -7,6 +7,21 @@ from bot.sql_helper.sql_emby import sql_get_emby
 from bot.func_helper.emby import emby
 
 
+ACTIVE_LEAVE_PRIVATE_NOTICE = (
+    '您因退出MICU社区群失去社区福利包括账号，'
+    '如有疑问请点击 /start 重新加群，'
+    '查看群内置顶用户手册内账号与申诉部分进行申诉'
+)
+
+
+async def _notify_active_leave_user(user_id: int):
+    try:
+        await bot.send_message(chat_id=user_id, text=ACTIVE_LEAVE_PRIVATE_NOTICE)
+    except Exception as error:
+        # 用户未启动过 Bot 或禁止私聊时，不影响退群删号和封禁主流程。
+        LOGGER.warning(f'【退群删号】- {user_id} 私聊通知发送失败：{error}')
+
+
 @bot.on_chat_member_updated(filters.chat(group))
 async def leave_del_emby(_, event: ChatMemberUpdated):
     if event.old_chat_member and not event.new_chat_member:
@@ -22,6 +37,7 @@ async def leave_del_emby(_, event: ChatMemberUpdated):
                         f'【退群删号】- {user_fname}-{user_id} 已经离开了群组，咕噜噜，ta的账户被吃掉啦！')
                     await bot.send_message(chat_id=event.chat.id,
                                            text=f'✅ [{user_fname}](tg://user?id={user_id}) [{user_id}] 已经离开了群组，咕噜噜，ta的账户被吃掉啦！')
+                    await _notify_active_leave_user(user_id)
                 else:
                     LOGGER.error(
                         f'【退群删号】- {user_fname}-{user_id} 已经离开了群组，但是没能吃掉ta的账户，请管理员检查！')

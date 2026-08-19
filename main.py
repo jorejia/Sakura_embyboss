@@ -5,8 +5,9 @@ import asyncio
 import uvloop
 
 uvloop.install()
-from bot import api, bot, config, LOGGER
+from bot import api, bot, config, LOGGER, _open, save_config
 from bot.scheduler import BotCommands
+from bot.sql_helper.sql_emby import sql_count_registered_slots
 from pyrogram import idle
 
 # 面板
@@ -29,9 +30,26 @@ def _proxy_log_text():
     return f"scheme={proxy.scheme}, host={proxy.hostname}, port={proxy.port}, {auth}"
 
 
+def _calibrate_registered_user_count():
+    registered_slots = sql_count_registered_slots()
+    if registered_slots is None:
+        LOGGER.error("【启动校准】读取 lv=b+c 的注册人数失败，保留配置文件原值")
+        return False
+
+    old_value = _open.tem
+    if old_value != registered_slots:
+        _open.tem = registered_slots
+        save_config()
+        LOGGER.info(f"【启动校准】配置注册人数已由 {old_value} 校准为 {registered_slots}（lv=b+c）")
+    else:
+        LOGGER.info(f"【启动校准】配置注册人数无需修改：{registered_slots}（lv=b+c）")
+    return True
+
+
 async def main():
     started = False
     try:
+        _calibrate_registered_user_count()
         await bot.start()
         started = True
 

@@ -1,6 +1,6 @@
 import json
 import os
-from pydantic import BaseModel, StrictBool, field_validator, ValidationError
+from pydantic import BaseModel, Field, StrictBool, field_validator, model_validator, ValidationError
 from typing import List, Optional, Union, Dict
 
 
@@ -66,12 +66,25 @@ class Ranks(BaseModel):
     announce: str = "公告，在日榜置顶处"
 
 
+class LineOption(BaseModel):
+    id: int
+    name: str
+    pro: bool = False
+
+    @field_validator('id')
+    def validate_id(cls, value):
+        if value <= 0:
+            raise ValueError('line id must be a positive integer')
+        return value
+
+
 class Schedall(BaseModel):
     dayrank: bool = True
     weekrank: bool = True
     dayplayrank: bool = False
     weekplayrank: bool = True
     check_ex: bool = True
+    check_ex_paused: bool = False
     low_activity: bool = False
     day_ranks_message_id: int = 0
     week_ranks_message_id: int = 0
@@ -142,11 +155,30 @@ class Config(BaseModel):
     db_backup_dir: str = "./db_backup"
     db_backup_maxcount: int = 7
     another_line: Optional[List[str]] = []
+    default_line_id: int = 1
+    line_options: List[LineOption] = Field(default_factory=lambda: [
+        LineOption(id=1, name='直连一线'),
+        LineOption(id=2, name='直连二线'),
+        LineOption(id=3, name='直连三线', pro=True),
+    ])
     # 如果使用的是 Python 3.10+ ，|运算符能用
     # w_anti_chanel_ids: Optional[List[str | int]] = []
     w_anti_chanel_ids: Optional[List[Union[str, int]]] = []
     proxy: Optional[Proxy] = Proxy()
     api: API = API()
+
+    @model_validator(mode='after')
+    def validate_line_configuration(self):
+        line_ids = [option.id for option in self.line_options]
+        if len(line_ids) != len(set(line_ids)):
+            raise ValueError('line_options contains duplicate line ids')
+
+        default_line = next((option for option in self.line_options if option.id == self.default_line_id), None)
+        if default_line is None:
+            raise ValueError('default_line_id must exist in line_options')
+        if default_line.pro:
+            raise ValueError('default_line_id cannot be a Pro line')
+        return self
 
     def __init__(self, **data):
         super().__init__(**data)
