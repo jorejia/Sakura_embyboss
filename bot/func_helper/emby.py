@@ -757,20 +757,56 @@ class Embyservice:
             return False, str(e)
 
     async def set_use_line(self, user_id, value: int):
+        """幂等设置 Sidecar 线路，并对超时后的实际成功进行回查确认。"""
+        try:
+            requested_value = int(value)
+        except (TypeError, ValueError):
+            return False, f"无效线路编号：{value}"
+
+        # Sidecar 对“重复设置当前线路”可能返回 404，先读取可直接规避。
+        current_ok, current_value = await self.get_use_line(user_id)
+        if current_ok and current_value == requested_value:
+            return True, current_value
+
+        set_error = None
         try:
             resp = r.get(
                 self._internal_use_line_url(),
                 headers=self.headers,
-                params={"userid": user_id, "value": value},
+                params={"userid": user_id, "value": requested_value},
                 timeout=5
             )
-            if resp.status_code not in (200, 204):
-                return False, f"HTTP {resp.status_code}"
-            data = resp.json()
-            return True, int(data.get("UseLine", value))
+            if resp.status_code in (200, 204):
+                if resp.status_code == 200:
+                    data = resp.json()
+                    result = int(data.get("UseLine", requested_value))
+                    if result == requested_value:
+                        return True, result
+                    set_error = f"后台返回线路 {result}，与目标线路不一致"
+                else:
+                    # 204 没有响应体，交由下面的实际状态回查确认。
+                    set_error = "HTTP 204 未返回线路状态"
+            else:
+                set_error = f"HTTP {resp.status_code}"
         except Exception as e:
-            LOGGER.error(f"设置线路状态失败: {e}")
-            return False, str(e)
+            set_error = str(e)
+
+        # 请求可能已在 Sidecar 生效，但响应因超时、断网或 404 丢失。
+        # 以后台最终状态为准，避免前台误报失败并显示旧线路。
+        verified, actual_value = await self.get_use_line(user_id)
+        if verified and actual_value == requested_value:
+            LOGGER.warning(
+                f"设置线路请求返回异常但后台已生效：user_id={user_id}, "
+                f"line={requested_value}, response={set_error or 'unexpected result'}"
+            )
+            return True, actual_value
+
+        LOGGER.error(
+            f"设置线路状态失败：user_id={user_id}, line={requested_value}, "
+            f"response={set_error or 'unexpected result'}, "
+            f"actual={actual_value if verified else 'unavailable'}"
+        )
+        return False, set_error or actual_value
 
     # async def get_remote_image_by_id(self, item_id: str, image_type: str):
     #     """
