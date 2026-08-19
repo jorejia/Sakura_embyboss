@@ -1,13 +1,13 @@
 """
 基本的sql操作
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from bot.sql_helper import Base, Session, engine
 from sqlalchemy import Column, BigInteger, String, DateTime, Integer, case, inspect, text
 from sqlalchemy import func
 from sqlalchemy import or_
-from bot.func_helper.line_access import line_pro_trial_expiry
+from bot.func_helper.line_access import line_pro_active, line_pro_trial_expiry
 
 
 class Emby(Base):
@@ -272,6 +272,32 @@ def sql_claim_line_pro_trial(tg: int, now=None):
         except Exception:
             session.rollback()
             return False
+
+
+def sql_grant_line_pro(tg: int, days: int = 1, now=None):
+    """仅为当前没有有效 Pro 的 Emby 用户原子赋予指定天数权限。"""
+    now = now or datetime.now()
+    if days <= 0:
+        return 'error', None, None
+
+    with Session() as session:
+        try:
+            user = session.query(Emby).filter(Emby.tg == tg).with_for_update().first()
+            if user is None:
+                return 'not_found', None, None
+            if not user.embyid:
+                return 'no_account', None, None
+            if line_pro_active(user.line_pro_ex, now=now):
+                return 'already_active', user.line_pro_ex, user.embyid
+
+            user.line_pro_ex = now + timedelta(days=days)
+            expires_at = user.line_pro_ex
+            emby_id = user.embyid
+            session.commit()
+            return 'success', expires_at, emby_id
+        except Exception:
+            session.rollback()
+            return 'error', None, None
 
 
 #

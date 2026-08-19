@@ -290,7 +290,10 @@ async def cr_kk_ikb(uid, first):
         if name != '无账户信息':
             ban = "🌟 解除禁用" if lv == "**到期封存**" else '💢 禁用账户'
             keyboard = [[ban, f'user_ban-{uid}'], ['⚠️ 删除账户', f'closeemby-{uid}']]
-            keyboard.append(['🧹 解除直连Pro', f'line_pro_revoke-{uid}'])
+            if line_pro == '未激活':
+                keyboard.append(['🎁 赋予直连Pro 1天', f'line_pro_grant-{uid}'])
+            else:
+                keyboard.append(['🧹 解除直连Pro', f'line_pro_revoke-{uid}'])
             if len(extra_emby_libs) > 0:
                 success, rep = emby.user(embyid=embyid)
                 if success:
