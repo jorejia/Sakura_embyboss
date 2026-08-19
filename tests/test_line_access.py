@@ -16,6 +16,8 @@ line_pro_trial_expiry = line_access.line_pro_trial_expiry
 line_pro_trial_available = line_access.line_pro_trial_available
 line_requires_pro = line_access.line_requires_pro
 visible_lines = line_access.visible_lines
+first_pro_line = line_access.first_pro_line
+pro_activation_line = line_access.pro_activation_line
 revoke_line_pro_access = line_access.revoke_line_pro_access
 
 
@@ -62,6 +64,20 @@ class LineAccessTests(unittest.TestCase):
         self.assertTrue(line_requires_pro(self.lines, 4))
         self.assertFalse(line_requires_pro(self.lines, 2))
         self.assertIsNone(configured_line(self.lines, 99))
+
+    def test_first_pro_line_uses_configuration_order(self):
+        reordered = [self.lines[0], self.lines[3], self.lines[2], self.lines[1]]
+        self.assertEqual(first_pro_line(reordered).id, 4)
+        self.assertIsNone(first_pro_line(self.lines[:2]))
+
+    def test_new_activation_selects_first_pro_but_renewal_does_not_switch(self):
+        self.assertEqual(pro_activation_line(self.lines, None, now=self.now).id, 3)
+        self.assertEqual(pro_activation_line(self.lines, self.now, now=self.now).id, 3)
+        self.assertIsNone(pro_activation_line(
+            self.lines,
+            self.now + timedelta(days=1),
+            now=self.now,
+        ))
 
 
 class RevokeLineProTests(unittest.IsolatedAsyncioTestCase):

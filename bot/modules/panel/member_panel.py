@@ -19,7 +19,7 @@ from bot import bot, LOGGER, _open, emby_line, sakura_b, ranks, group, extra_emb
 from pyrogram import filters
 from bot.func_helper.emby import emby
 from bot.func_helper.line_access import configured_line, line_pro_active, line_pro_status_text, line_requires_pro, \
-    line_pro_trial_available
+    line_pro_trial_available, pro_activation_line
 from bot.func_helper.filters import user_in_group_on_filter
 from bot.func_helper.utils import members_info, tem_alluser, cr_link_one, cr_link_invite
 from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create_ikb, del_me_ikb, re_delme_ikb, \
@@ -582,8 +582,8 @@ def build_parental_menu_text(current_value: int) -> str:
 def build_line_menu_text(current_value: int, line_pro_ex=None) -> str:
     return (
         f'**🛣️ 线路选择**\n\n'
-        f'本功能只作为直连线路视频流的实时切换，不适用于海外线，'
-        f'线路地址见用户手册\n\n'
+        f'本功能只作为直连服视频流线路的实时切换，使用海外服时无效，'
+        f'服务器地址请见用户手册\n\n'
         f'**当前线路**：{line_label(current_value)}\n\n'
         f'**直连Pro**：{line_pro_status_text(line_pro_ex)}\n\n'
         f'说明：\n'
@@ -706,6 +706,8 @@ async def line_pro_trial(_, call):
     if e.line_pro_trial_used:
         return await callAnswer(call, '❌ 每个用户只有一次试用机会，你已经使用过了', True)
 
+    now = datetime.now()
+    activation_line = pro_activation_line(line_options, e.line_pro_ex, now=now)
     ok, value = await emby.get_use_line(e.embyid)
     if not ok:
         return await callAnswer(call, f'❌ 获取当前线路失败：{value}', True)
@@ -716,8 +718,25 @@ async def line_pro_trial(_, call):
     if expires_at is False:
         return await callAnswer(call, '❌ 试用资格领取失败，请稍后重试', True)
 
+    answer_text = '🎉 已获得 1 天直连 Pro 试用'
+    if activation_line is not None:
+        switched, switch_result = await emby.set_use_line(e.embyid, activation_line.id)
+        if switched:
+            value = switch_result
+            answer_text += f'\n已自动切换到 {activation_line.name}'
+            LOGGER.info(
+                f'【直连Pro自动切线】用户 {call.from_user.id} 开通试用，'
+                f'已切换到 {activation_line.name}[{activation_line.id}]'
+            )
+        else:
+            answer_text += f'\n自动切换到 {activation_line.name} 失败，请稍后手动切换'
+            LOGGER.warning(
+                f'【直连Pro自动切线】用户 {call.from_user.id} 试用开通后切换到线路 '
+                f'{activation_line.id} 失败：{switch_result}'
+            )
+
     await asyncio.gather(
-        callAnswer(call, '🎉 已获得 1 天直连 Pro 试用', True),
+        callAnswer(call, answer_text, True),
         editMessage(call, build_line_menu_text(value, expires_at),
                     buttons=line_menu_ikb(value, has_pro=True, trial_available=False))
     )

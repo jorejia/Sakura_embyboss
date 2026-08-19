@@ -5,9 +5,9 @@ import requests
 import time
 from datetime import timedelta, datetime
 
-from bot import bot, _open, LOGGER, bot_photo, user_buy
+from bot import bot, _open, LOGGER, bot_photo, user_buy, line_options
 from bot.func_helper.emby import emby
-from bot.func_helper.line_access import line_pro_status_text
+from bot.func_helper.line_access import line_pro_active, line_pro_status_text, pro_activation_line
 from bot.func_helper.fix_bottons import register_code_ikb
 from bot.func_helper.msg_utils import sendMessage, sendPhoto
 from bot.sql_helper.sql_code import Code
@@ -35,6 +35,9 @@ async def _redeem_line_code(msg, register_code, data):
             return await sendMessage(msg, "🔔 **尚未拥有 Emby 账号**\n线路码只能用于已绑定的 Emby 账号。", timer=60)
 
         days = code.us
+        was_pro_active = line_pro_active(user.line_pro_ex, now=now)
+        activation_line = pro_activation_line(line_options, user.line_pro_ex, now=now)
+        emby_id = user.embyid
         base_ex = user.line_pro_ex if user.line_pro_ex and user.line_pro_ex > now else now
         line_pro_ex = base_ex + timedelta(days=days)
         updated = session.query(Code).filter(
@@ -49,11 +52,29 @@ async def _redeem_line_code(msg, register_code, data):
         user.line_pro_trial_used = 1
         session.commit()
 
+    switch_text = ''
+    if activation_line is not None:
+        switched, switch_result = await emby.set_use_line(emby_id, activation_line.id)
+        if switched:
+            switch_text = f'\n🛣️ 已自动切换到：**{activation_line.name}**\n'
+            LOGGER.info(
+                f'【直连Pro自动切线】用户 {msg.from_user.id} 首次开通 Pro，'
+                f'已切换到 {activation_line.name}[{activation_line.id}]'
+            )
+        else:
+            switch_text = (f'\n⚠️ Pro 已开通，但自动切换到 **{activation_line.name}** 失败；'
+                           f'请稍后在「直连切线」中手动切换。\n')
+            LOGGER.warning(
+                f'【直连Pro自动切线】用户 {msg.from_user.id} 切换到线路 '
+                f'{activation_line.id} 失败：{switch_result}'
+            )
+
     masked_code = register_code[:-7] + "░" * 7
     await sendMessage(
         msg,
-        f'🎊 直连Pro已激活 {days} 天\n'
+        f'🎊 直连Pro已{"续期" if was_pro_active else "激活"} {days} 天\n'
         f'📅 到期时间：**{line_pro_status_text(line_pro_ex)}**\n\n'
+        f'{switch_text}'
         f'现在可在「直连切线」中查看并切换 Pro 线路。'
     )
     LOGGER.info(

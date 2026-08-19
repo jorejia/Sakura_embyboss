@@ -38,6 +38,18 @@ def line_requires_pro(options, value):
     return bool(option and option.pro)
 
 
+def first_pro_line(options):
+    """按配置文件中的顺序返回第一条 Pro 线路。"""
+    return next((option for option in options if option.pro), None)
+
+
+def pro_activation_line(options, previous_expiry, now=None):
+    """仅从无有效 Pro 变为开通时返回自动切换目标；续费返回 None。"""
+    if line_pro_active(previous_expiry, now=now):
+        return None
+    return first_pro_line(options)
+
+
 async def revoke_line_pro_access(emby_id, default_line_id, set_use_line, clear_permission):
     """先切回默认线路，再清除 Pro 权限；返回 (成功, 失败阶段, 详情)。"""
     if emby_id:
