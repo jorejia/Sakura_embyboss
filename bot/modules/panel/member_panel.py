@@ -527,7 +527,7 @@ async def user_emby_unblock(_, call):
 async def call_exchange(_, call):
     await asyncio.gather(callAnswer(call, '🔋 使用注册码'), deleteMessage(call))
     msg = await ask_return(call, text='🔋 **【使用注册码】**：\n\n'
-                                      f'- 请在120s内对我发送你的注册码，形如\n`{ranks.logo}-xx-xxxx`\n\n退出点 /cancel',
+                                      f'- 请在120s内对我发送你的注册码/续费码/直连Pro码，形如\n`{ranks.logo}-xx-xxxx`\n\n退出点 /cancel',
                            button=re_exchange_b_ikb)
     if msg is False:
         return
@@ -676,19 +676,46 @@ async def line_menu(_, call):
     if not e.embyid:
         return await callAnswer(call, '❌ 需要先拥有 Emby 账号后才能设置线路', True)
 
-    ok, value = await emby.get_use_line(e.embyid)
-    if not ok:
-        return await callAnswer(call, f'❌ 获取当前线路失败：{value}', True)
+    now = datetime.now()
+    expired_at = e.line_pro_ex if e.line_pro_ex and e.line_pro_ex <= now else None
+    expiry_notice = None
 
-    has_pro = line_pro_active(e.line_pro_ex)
-    if not has_pro and line_requires_pro(line_options, value):
+    if expired_at is not None:
         ok, value = await emby.set_use_line(e.embyid, default_line_id)
         if not ok:
             return await callAnswer(call, f'❌ 直连Pro已到期，但切回默认线路失败：{value}', True)
-        sql_update_emby(and_(Emby.tg == e.tg, Emby.line_pro_ex <= datetime.now()), line_pro_ex=None)
+
+        cleared = sql_update_emby(
+            and_(Emby.tg == e.tg, Emby.line_pro_ex <= now),
+            line_pro_ex=None,
+        )
+        if not cleared:
+            return await callAnswer(call, '⚠️ 已切回普通线路，但清除过期 Pro 权限失败，请稍后重试', True)
+
+        expiry_notice = (
+            f'您的直连Pro权益已于 {expired_at.strftime("%Y-%m-%d %H:%M:%S")} 到期，'
+            f'已自动切回普通线路'
+        )
+        e.line_pro_ex = None
+        LOGGER.info(
+            f'【直连Pro页面到期处理】用户 {call.from_user.id} 的权益已于 {expired_at} 到期，'
+            f'已切回默认线路 {default_line_id} 并清除权限'
+        )
+    else:
+        ok, value = await emby.get_use_line(e.embyid)
+        if not ok:
+            return await callAnswer(call, f'❌ 获取当前线路失败：{value}', True)
+
+        # 兼容权限字段已被其他入口清除、但 Sidecar 仍停留在 Pro 线路的情况。
+        if not line_pro_active(e.line_pro_ex, now=now) and line_requires_pro(line_options, value):
+            ok, value = await emby.set_use_line(e.embyid, default_line_id)
+            if not ok:
+                return await callAnswer(call, f'❌ 直连Pro未激活，但切回默认线路失败：{value}', True)
+
+    has_pro = line_pro_active(e.line_pro_ex, now=now)
 
     await asyncio.gather(
-        callAnswer(call, '🛣️ 线路选择'),
+        callAnswer(call, expiry_notice or '🛣️ 线路选择', expiry_notice is not None),
         editMessage(call, build_line_menu_text(value, e.line_pro_ex),
                     buttons=line_menu_ikb(value, has_pro=has_pro,
                                           trial_available=line_pro_trial_available(
