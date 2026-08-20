@@ -26,6 +26,27 @@ class ExpiryPolicyTests(unittest.TestCase):
         self.assertIn("scheduler.add_job(check_expired, 'cron'", panel_source)
         self.assertNotIn('sched-check_ex', buttons_source)
 
+    def test_weighted_conversion_runs_after_pro_and_coin_renewal(self):
+        root = Path(__file__).parents[1]
+        source = (root / 'bot' / 'scheduler' / 'check_ex.py').read_text(encoding='utf-8')
+        sql_source = (root / 'bot' / 'sql_helper' / 'sql_emby.py').read_text(encoding='utf-8')
+
+        pro_check = source.index('await check_line_pro_expired()')
+        account_query = source.index("Emby.ex < datetime.now(), Emby.lv == 'b'")
+        coin_renewal = source.index('_open.exchange and r.iv >= _open.exchange_cost * 30')
+        weighted_conversion = source.index('sql_convert_expiry_by_weight(')
+        self.assertLess(pro_check, account_query)
+        self.assertLess(coin_renewal, weighted_conversion)
+        self.assertIn("if convert_status == 'success':", source)
+        self.assertIn('await bot.send_message(r.tg, text)', source[weighted_conversion:])
+
+        helper = sql_source[sql_source.index('def sql_convert_expiry_by_weight('):]
+        self.assertIn("if not line_pro_active(user.line_pro_ex, now=now):", helper)
+        self.assertIn('if expires_at <= now + timedelta(days=1):', helper)
+        self.assertIn('user.ex = expires_at', helper)
+        self.assertIn('user.line_pro_ex = expires_at', helper)
+        self.assertIn('with_for_update()', helper)
+
 
 if __name__ == '__main__':
     unittest.main()

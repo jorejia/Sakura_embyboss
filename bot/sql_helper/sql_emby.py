@@ -7,7 +7,7 @@ from bot.sql_helper import Base, Session, engine
 from sqlalchemy import Column, BigInteger, String, DateTime, Integer, case, inspect, text
 from sqlalchemy import func
 from sqlalchemy import or_
-from bot.func_helper.line_access import line_pro_active, line_pro_trial_expiry
+from bot.func_helper.line_access import line_pro_active, line_pro_trial_expiry, weighted_expiry
 
 
 class Emby(Base):
@@ -298,6 +298,36 @@ def sql_grant_line_pro(tg: int, days: int = 1, now=None):
         except Exception:
             session.rollback()
             return 'error', None, None
+
+
+def sql_convert_expiry_by_weight(tg: int, account_weight: float,
+                                 line_pro_weight: float, now=None):
+    """在行锁内将已到期账号和仍有效的 Pro 到期时间合并为同一时间。"""
+    now = now or datetime.now()
+    with Session() as session:
+        try:
+            user = session.query(Emby).filter(Emby.tg == tg).with_for_update().first()
+            if user is None or user.lv != 'b' or user.ex is None or user.ex >= now:
+                return 'not_expired', None
+            if not line_pro_active(user.line_pro_ex, now=now):
+                return 'no_active_pro', None
+
+            expires_at = weighted_expiry(
+                user.ex,
+                user.line_pro_ex,
+                account_weight,
+                line_pro_weight,
+            )
+            if expires_at <= now + timedelta(days=1):
+                return 'not_extendable', expires_at
+
+            user.ex = expires_at
+            user.line_pro_ex = expires_at
+            session.commit()
+            return 'success', expires_at
+        except Exception:
+            session.rollback()
+            return 'error', None
 
 
 #

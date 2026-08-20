@@ -19,6 +19,7 @@ visible_lines = line_access.visible_lines
 first_pro_line = line_access.first_pro_line
 pro_activation_line = line_access.pro_activation_line
 revoke_line_pro_access = line_access.revoke_line_pro_access
+weighted_expiry = line_access.weighted_expiry
 
 
 class LineAccessTests(unittest.TestCase):
@@ -78,6 +79,24 @@ class LineAccessTests(unittest.TestCase):
             self.now + timedelta(days=1),
             now=self.now,
         ))
+
+    def test_weighted_expiry_uses_both_configured_weights(self):
+        account_expiry = self.now - timedelta(days=2)
+        line_pro_expiry = self.now + timedelta(days=4)
+        self.assertEqual(
+            weighted_expiry(account_expiry, line_pro_expiry, 2, 1),
+            self.now,
+        )
+        self.assertEqual(
+            weighted_expiry(account_expiry, line_pro_expiry, 1, 2),
+            self.now + timedelta(days=2),
+        )
+
+    def test_weighted_expiry_rejects_invalid_weights(self):
+        with self.assertRaises(ValueError):
+            weighted_expiry(self.now, self.now, 0, 0)
+        with self.assertRaises(ValueError):
+            weighted_expiry(self.now, self.now, -1, 1)
 
 
 class RevokeLineProTests(unittest.IsolatedAsyncioTestCase):

@@ -69,6 +69,17 @@ class LineOption(BaseModel):
         return value
 
 
+class ExpiryWeights(BaseModel):
+    account: float = Field(default=1.0, ge=0)
+    line_pro: float = Field(default=1.0, ge=0)
+
+    @model_validator(mode='after')
+    def validate_total_weight(self):
+        if self.account + self.line_pro <= 0:
+            raise ValueError('at least one expiry weight must be positive')
+        return self
+
+
 class Schedall(BaseModel):
     dayrank: bool = True
     weekrank: bool = True
@@ -147,6 +158,7 @@ class Config(BaseModel):
     db_backup_dir: str = "./db_backup"
     db_backup_maxcount: int = 7
     default_line_id: int = 1
+    expiry_weights: ExpiryWeights = Field(default_factory=ExpiryWeights)
     line_options: List[LineOption] = Field(default_factory=lambda: [
         LineOption(id=1, name='直连一线'),
         LineOption(id=2, name='直连二线'),

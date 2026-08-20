@@ -15,9 +15,18 @@ from bot.sql_helper.sql_emby import sql_get_emby, Emby
 from bot.sql_helper import Session
 
 
+def _line_code_account_error(user):
+    if user is None or not user.embyid:
+        return "当前无账号请先使用注册码注册账号"
+    if user.lv == 'c':
+        return "您的账号已到期，请先使用续费码续费账号"
+    return None
+
+
 async def _redeem_line_code(msg, register_code, data):
-    if not data.embyid:
-        return await sendMessage(msg, "🔔 **尚未拥有 Emby 账号**\n线路码只能用于已绑定的 Emby 账号。", timer=60)
+    account_error = _line_code_account_error(data)
+    if account_error:
+        return await sendMessage(msg, account_error, timer=60)
 
     now = datetime.now()
     with Session() as session:
@@ -31,8 +40,9 @@ async def _redeem_line_code(msg, register_code, data):
             )
 
         user = session.query(Emby).filter(Emby.tg == msg.from_user.id).with_for_update().first()
-        if user is None or not user.embyid:
-            return await sendMessage(msg, "🔔 **尚未拥有 Emby 账号**\n线路码只能用于已绑定的 Emby 账号。", timer=60)
+        account_error = _line_code_account_error(user)
+        if account_error:
+            return await sendMessage(msg, account_error, timer=60)
 
         days = code.us
         was_pro_active = line_pro_active(user.line_pro_ex, now=now)
@@ -85,11 +95,6 @@ async def _redeem_line_code(msg, register_code, data):
 
 async def rgs_code(_, msg, register_code):
     data = sql_get_emby(tg=msg.from_user.id)
-    if not data: return await sendMessage(msg, "请先点击 /start ，否则无法使用注册码")
-    embyid = data.embyid
-    ex = data.ex
-    lv = data.lv
-    us = data.us
     with Session() as session:
         code_info = session.query(Code.invite).filter(Code.code == register_code).first()
     if not code_info:
@@ -97,6 +102,12 @@ async def rgs_code(_, msg, register_code):
     code_type = code_info[0]
     if code_type == 'l':
         return await _redeem_line_code(msg, register_code, data)
+    if not data:
+        return await sendMessage(msg, "请先点击 /start ，否则无法使用注册码")
+    embyid = data.embyid
+    ex = data.ex
+    lv = data.lv
+    us = data.us
     if code_type == 'a':
         if embyid:
             return await sendMessage(msg, "🔔 **已有账号**\n活动码只能无账号的情况下使用哦~", timer=60)

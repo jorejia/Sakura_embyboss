@@ -16,6 +16,10 @@
   "emby_url": "http://255.255.255.255:8096",
   "sidecar_url": "http://255.255.255.255:8097",
   "default_line_id": 1,
+  "expiry_weights": {
+    "account": 1.0,
+    "line_pro": 1.0
+  },
   "line_options": [
     {
       "id": 1,

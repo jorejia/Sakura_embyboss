@@ -19,6 +19,15 @@ class LineConfigTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             schemas.LineOption(id=0, name='无效线路')
 
+    def test_expiry_weights_are_configurable_and_require_a_positive_total(self):
+        weights = schemas.ExpiryWeights(account=2, line_pro=3)
+        self.assertEqual(weights.account, 2)
+        self.assertEqual(weights.line_pro, 3)
+        with self.assertRaises(ValueError):
+            schemas.ExpiryWeights(account=0, line_pro=0)
+        with self.assertRaises(ValueError):
+            schemas.ExpiryWeights(account=-1, line_pro=1)
+
     def test_config_json_line_options_are_loaded_and_saved(self):
         config = schemas.Config(
             bot_name='test', bot_token='test', owner_api=1, owner_hash='test', owner=1,
@@ -51,6 +60,7 @@ class LineConfigTests(unittest.TestCase):
         self.assertEqual([option.pro for option in config.line_options], [False, True, True])
         self.assertEqual(config.model_dump()['default_line_id'], 1)
         self.assertEqual([option['id'] for option in config.model_dump()['line_options']], [1, 3, 4])
+        self.assertEqual(config.model_dump()['expiry_weights'], {'account': 1.0, 'line_pro': 1.0})
         dumped = config.model_dump()
         self.assertNotIn('emby_line', dumped)
         self.assertNotIn('another_line', dumped)

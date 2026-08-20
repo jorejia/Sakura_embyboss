@@ -25,6 +25,21 @@ def line_pro_trial_available(trial_used, expires_at, now=None):
     return not bool(trial_used) and not line_pro_active(expires_at, now=now)
 
 
+def weighted_expiry(account_expiry, line_pro_expiry, account_weight, line_pro_weight):
+    """按配置权重合并账号与直连 Pro 到期时间。"""
+    if account_expiry is None or line_pro_expiry is None:
+        raise ValueError('both expiry times are required')
+    if account_weight < 0 or line_pro_weight < 0:
+        raise ValueError('expiry weights cannot be negative')
+
+    total_weight = account_weight + line_pro_weight
+    if total_weight <= 0:
+        raise ValueError('at least one expiry weight must be positive')
+
+    line_pro_ratio = line_pro_weight / total_weight
+    return account_expiry + (line_pro_expiry - account_expiry) * line_pro_ratio
+
+
 def configured_line(options, value):
     return next((option for option in options if option.id == value), None)
 

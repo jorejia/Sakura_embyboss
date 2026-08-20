@@ -45,6 +45,22 @@ Sakura 修改 `config.json` 后需要重启 Bot；OpenResty 修改 Lua 配置后
 `default_line_id` 指向的线路是 Pro 到期时切回的默认线路，应保持为非 Pro。
 线路编号不要求连续，但不能重复。
 
+## 账号与直连 Pro 到期时间权重
+
+在 `config.json` 中可分别设置账号到期时间和直连 Pro 到期时间的权重：
+
+```json
+"expiry_weights": {
+  "account": 1.0,
+  "line_pro": 1.0
+}
+```
+
+账号到期检测会先处理已经到期的直连 Pro，再尝试米币自动续期。只有米币没有续期成功、
+账号已经到期且直连 Pro 仍有效时，才按上述权重计算两个时间的加权平均值。只有平均值
+严格晚于本次检测时间 1 天，账号和直连 Pro 才会同时改为该时间；等于或不足 1 天时，
+账号按原到期流程处理。两个权重必须为非负数，且不能同时为 `0`。修改后需要重启 Bot。
+
 ## 💐 Our Contributors
 
 <a href="https://github.com/berry8838/Sakura_embyboss/graphs/contributors">

@@ -37,6 +37,7 @@ emby_url = config.emby_url
 sidecar_url = config.sidecar_url
 emby_block = config.emby_block
 default_line_id = config.default_line_id
+expiry_weights = config.expiry_weights
 line_options = config.line_options
 # # 数据库
 db_host = config.db_host
