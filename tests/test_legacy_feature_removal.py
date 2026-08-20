@@ -12,7 +12,7 @@ class LegacyFeatureRemovalTests(unittest.TestCase):
         member_panel = (self.root / 'bot' / 'modules' / 'panel' / 'member_panel.py').read_text(encoding='utf-8')
         sched_panel = (self.root / 'bot' / 'modules' / 'panel' / 'sched_panel.py').read_text(encoding='utf-8')
 
-        for legacy_field in ('stat: bool', 'timing: int', 'low_activity: bool'):
+        for legacy_field in ('stat: bool', 'timing: int', 'check_ex: bool', 'low_activity: bool'):
             self.assertNotIn(legacy_field, schema)
         self.assertNotIn('_open.stat', member_panel)
         self.assertNotIn('low_activity', sched_panel)

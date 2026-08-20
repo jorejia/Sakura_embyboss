@@ -25,7 +25,6 @@ auto_backup_db = DbBackupUtils.auto_backup_db
 action_dict = {
     "dayrank": day_ranks,
     "weekrank": week_ranks,
-    "check_ex": check_expired,
     "backup_db": auto_backup_db
 }
 
@@ -33,12 +32,14 @@ action_dict = {
 args_dict = {
     "dayrank": {'hour': 18, 'minute': 30, 'id': 'day_ranks'},
     "weekrank": {'day_of_week': "sun", 'hour': 23, 'minute': 50, 'id': 'week_ranks'},
-    "check_ex": {'hour': 0, 'minute': 0, 'id': 'check_expired'},
     "backup_db": {'hour': 2, 'minute': 30, 'id': 'backup_db'}
 }
 
 
 def set_all_sche():
+    # 到期检测始终注册；暂停状态由 check_expired 内部统一判断，
+    # 从而让自动任务与手动 /check_ex 具有完全一致的行为。
+    scheduler.add_job(check_expired, 'cron', hour=0, minute=0, id='check_expired')
     for key, value in action_dict.items():
         if getattr(schedall, key):
             action = action_dict[key]

@@ -76,7 +76,6 @@
   "schedall": {
     "dayrank": true,
     "weekrank": true,
-    "check_ex": true,
     "check_ex_paused": false,
     "backup_db": false
   },

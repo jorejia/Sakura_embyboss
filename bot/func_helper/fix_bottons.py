@@ -162,8 +162,8 @@ def checkin_menu_ikb(options=None) -> InlineKeyboardMarkup:
 
 gm_ikb_content = ikb([[('⭕ 注册上限', 'all_user_limit'), ('🎁 生成活动码', 'cr_activity'), ('🎟️ 生成注册', 'cr_link')],
                       [('💎 生成线路码', 'cr_line'), ('💊 查询注册', 'ch_link'), ('🏷️ 别名设置', 'alias_setting')],
-                      [('🏬 兑换设置', 'set_renew')],
-                      [('🌏 定时', 'schedall'), ('🕹️ 主界面', 'back_start'), ('其他 🪟', 'back_config')]])
+                      [('🏬 兑换设置', 'set_renew'), ('🌏 定时', 'schedall'), ('其他 🪟', 'back_config')],
+                      [('🕹️ 主界面', 'back_start')]])
 
 
 re_cr_link_ikb = ikb([[('♻️ 继续创建', 'cr_link'), ('🎗️ 返回主页', 'manage')]])
@@ -234,11 +234,9 @@ def config_preparation() -> InlineKeyboardMarkup:
     leave_ban = '✅' if _open.leave_ban else '❎'
     site = '✅' if _open.site else '❎'
     keyboard = ikb(
-        [[('📄 导出日志', 'log_out')],
-         [(f'{site} 正常/隐身模式', 'change_site_open')],
+        [[('📄 导出日志', 'log_out'), (f'{site} 正常/隐身模式', 'change_site_open')],
          [(f'{code} 注册码续期', 'open_allow_code'), (f'{buy_stat} 开关购买', 'set_buy')],
-         [(f'{leave_ban} 退群封禁', 'leave_ban')],
-         [('🔙 返回', 'manage')]])
+         [(f'{leave_ban} 退群封禁', 'leave_ban'), ('🔙 返回', 'manage')]])
     return keyboard
 
 
@@ -320,13 +318,11 @@ def gog_rester_ikb(link=None) -> InlineKeyboardMarkup:
 def sched_buttons():
     dayrank = '✅' if schedall.dayrank else '❎'
     weekrank = '✅' if schedall.weekrank else '❎'
-    check_ex = '✅' if schedall.check_ex else '❎'
     check_ex_pause_text = '▶️ 恢复到期检测' if schedall.check_ex_paused else '⏸️ 暂停到期检测'
     backup_db = '✅' if schedall.backup_db else '❎'
     keyboard = InlineKeyboard(row_width=2)
     keyboard.add(InlineButton(f'{dayrank} 播放日榜', f'sched-dayrank'),
                  InlineButton(f'{weekrank} 播放周榜', f'sched-weekrank'),
-                  InlineButton(f'{check_ex} 到期保号', f'sched-check_ex'),
                   InlineButton(check_ex_pause_text, 'expiry_pause_toggle'),
                  InlineButton(f'{backup_db} 自动备份数据库', f'sched-backup_db'),
                  )

@@ -33,7 +33,12 @@ class LineConfigTests(unittest.TestCase):
             invite='n', money='test', emby_api='test', emby_url='test',
             sidecar_url='test', emby_line='legacy.example', another_line=['legacy'], extra_emby_libs=['legacy'],
             db_host='test', db_user='test', db_pwd='test', db_name='test', ranks={},
-            schedall={'dayplayrank': True, 'weekplayrank': True, 'low_activity': True},
+            schedall={
+                'check_ex': False,
+                'dayplayrank': True,
+                'weekplayrank': True,
+                'low_activity': True,
+            },
             default_line_id=1,
             line_options=[
                 {'id': 1, 'name': '默认线路', 'pro': False},
@@ -51,8 +56,9 @@ class LineConfigTests(unittest.TestCase):
         self.assertNotIn('extra_emby_libs', dumped)
         for legacy_field in ('stat', 'timing', 'uplays'):
             self.assertNotIn(legacy_field, dumped['open'])
-        for legacy_field in ('dayplayrank', 'weekplayrank', 'low_activity'):
+        for legacy_field in ('check_ex', 'dayplayrank', 'weekplayrank', 'low_activity'):
             self.assertNotIn(legacy_field, dumped['schedall'])
+        self.assertTrue(dumped['schedall']['check_ex_paused'])
 
 
 if __name__ == '__main__':

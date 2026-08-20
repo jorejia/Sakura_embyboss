@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
-from bot import sidecar_url, emby_url, emby_api, _open, save_config, emby_block, schedall, LOGGER
+from bot import sidecar_url, emby_url, emby_api, _open, save_config, emby_block, LOGGER
 from bot.sql_helper.sql_emby import sql_get_emby, sql_update_emby, Emby
 from bot.sql_helper.sql_favorites import sql_delete_favorites_by_embyid
 from bot.func_helper.utils import pwd_create, convert_runtime, cache
@@ -241,10 +241,7 @@ class Embyservice:
                     sql_update_emby(Emby.tg == tg, embyid=id, name=name, pwd=pwd, pwd2=pwd2, lv='b',
                                     cr=datetime.now(), ex=ex, us=0)
 
-                    if schedall.check_ex:
-                        ex = ex.strftime("%Y-%m-%d %H:%M:%S")
-                    else:
-                        ex = '__无需保号，放心食用__'
+                    ex = ex.strftime("%Y-%m-%d %H:%M:%S")
                     return pwd, ex
         elif new_user.status_code == 400:
             return 400

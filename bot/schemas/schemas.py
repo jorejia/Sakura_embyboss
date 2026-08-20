@@ -73,7 +73,6 @@ class LineOption(BaseModel):
 class Schedall(BaseModel):
     dayrank: bool = True
     weekrank: bool = True
-    check_ex: bool = True
     check_ex_paused: bool = False
     day_ranks_message_id: int = 0
     week_ranks_message_id: int = 0
@@ -81,6 +80,15 @@ class Schedall(BaseModel):
     restart_msg_id: int = 0
     backup_db: bool = True
     guanying: bool = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def migrate_expiry_switch(cls, data):
+        """把旧版“关闭到期保号”状态迁移为统一的暂停状态。"""
+        if isinstance(data, dict) and data.get('check_ex') is False:
+            data = dict(data)
+            data['check_ex_paused'] = True
+        return data
 
     def __init__(self, **data):
         super().__init__(**data)
