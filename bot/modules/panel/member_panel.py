@@ -581,9 +581,9 @@ def build_parental_menu_text(current_value: int) -> str:
 
 def build_line_menu_text(current_value: int, line_pro_ex=None) -> str:
     return (
-        f'**🛣️ 线路选择**\n\n'
+        f'**🛣️ 直连服线路选择**\n\n'
         f'本功能只作为直连服视频流线路的实时切换，使用海外服时无效，'
-        f'服务器地址请见用户手册\n\n'
+        f'服务器地址请见用户手册，[点击发电](https://shop.micu.me)获取直连Pro权益\n\n'
         f'**当前线路**：{line_label(current_value)}\n\n'
         f'**直连Pro**：{line_pro_status_text(line_pro_ex)}\n\n'
         f'说明：\n'
