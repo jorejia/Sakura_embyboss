@@ -27,7 +27,6 @@ bot_photo = config.bot_photo
 user_buy = config.user_buy
 _open = config.open
 admins = config.admins
-invite = config.invite
 sakura_b = config.money
 ranks = config.ranks
 prefixes = ['/', '!', '.', '，', '。']

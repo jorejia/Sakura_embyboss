@@ -26,7 +26,6 @@ class UserBuy(BaseModel):
             return v.lower() == 'y'
         return v
 
-    text: bool
     button: List[str]
 
 
@@ -79,7 +78,6 @@ class Schedall(BaseModel):
     restart_chat_id: int = 0
     restart_msg_id: int = 0
     backup_db: bool = True
-    guanying: bool = True
 
     @model_validator(mode='before')
     @classmethod
@@ -133,7 +131,6 @@ class Config(BaseModel):
     user_buy: UserBuy
     open: Open
     admins: Optional[List[int]] = []
-    invite: str
     money: str
     emby_api: str
     emby_url: str

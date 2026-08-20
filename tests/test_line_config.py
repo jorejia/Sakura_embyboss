@@ -38,6 +38,7 @@ class LineConfigTests(unittest.TestCase):
                 'dayplayrank': True,
                 'weekplayrank': True,
                 'low_activity': True,
+                'guanying': True,
             },
             default_line_id=1,
             line_options=[
@@ -54,10 +55,13 @@ class LineConfigTests(unittest.TestCase):
         self.assertNotIn('emby_line', dumped)
         self.assertNotIn('another_line', dumped)
         self.assertNotIn('extra_emby_libs', dumped)
+        self.assertNotIn('invite', dumped)
+        self.assertNotIn('text', dumped['user_buy'])
         for legacy_field in ('stat', 'timing', 'uplays'):
             self.assertNotIn(legacy_field, dumped['open'])
         for legacy_field in ('check_ex', 'dayplayrank', 'weekplayrank', 'low_activity'):
             self.assertNotIn(legacy_field, dumped['schedall'])
+        self.assertNotIn('guanying', dumped['schedall'])
         self.assertTrue(dumped['schedall']['check_ex_paused'])
 
 
