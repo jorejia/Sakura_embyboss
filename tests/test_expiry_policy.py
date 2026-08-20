@@ -18,7 +18,8 @@ class ExpiryPolicyTests(unittest.TestCase):
         self.assertIn('if schedall.check_ex_paused:', source)
         self.assertIn("return 'paused'", source)
         self.assertIn('Emby.ex < datetime.now()', source)
-        self.assertIn('Emby2.ex < datetime.now()', source)
+        self.assertNotIn('Emby2', source)
+        self.assertNotIn('sql_emby2', source)
 
 
 if __name__ == '__main__':

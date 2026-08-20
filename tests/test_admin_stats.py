@@ -24,7 +24,6 @@ class AdminStatsTests(unittest.TestCase):
         root = Path(__file__).parents[1]
         sql_source = (root / 'bot' / 'sql_helper' / 'sql_emby.py').read_text(encoding='utf-8')
         main_source = (root / 'main.py').read_text(encoding='utf-8')
-        admin_source = (root / 'bot' / 'modules' / 'panel' / 'admin_panel.py').read_text(encoding='utf-8')
 
         self.assertIn('Emby.lv.in_(("b", "c"))', sql_source)
         self.assertIn('_calibrate_registered_user_count()', main_source)
@@ -32,7 +31,8 @@ class AdminStatsTests(unittest.TestCase):
             main_source.index('_calibrate_registered_user_count()', main_source.index('async def main()')),
             main_source.index('await bot.start()'),
         )
-        self.assertIn('registered_slots = sql_count_registered_slots()', admin_source)
+        self.assertIn("('⭕ 注册上限', 'all_user_limit')", (root / 'bot' / 'func_helper' / 'fix_bottons.py').read_text(encoding='utf-8'))
+        self.assertNotIn('open-menu', (root / 'bot' / 'modules' / 'panel' / 'admin_panel.py').read_text(encoding='utf-8'))
 
 
 if __name__ == '__main__':

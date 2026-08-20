@@ -7,9 +7,8 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
-from bot import sidecar_url, emby_url, emby_api, _open, save_config, emby_block, schedall, LOGGER, another_line
-from bot.sql_helper.sql_emby import sql_update_emby, Emby
-from bot.sql_helper.sql_emby2 import sql_add_emby2, sql_delete_emby2
+from bot import sidecar_url, emby_url, emby_api, _open, save_config, emby_block, schedall, LOGGER
+from bot.sql_helper.sql_emby import sql_get_emby, sql_update_emby, Emby
 from bot.sql_helper.sql_favorites import sql_delete_favorites_by_embyid
 from bot.func_helper.utils import pwd_create, convert_runtime, cache
 
@@ -207,14 +206,13 @@ class Embyservice:
     def _internal_auth_tokens_clear_url(self):
         return f"{sidecar_url.rstrip('/')}/internal/auth-tokens/clear"
 
-    async def emby_create(self, tg: int, name, pwd2, us: int, stats):
+    async def emby_create(self, tg: int, name, pwd2, us: int):
         """
         创建账户
         :param tg: tg_id
         :param name: emby_name
         :param pwd2: pwd2 安全码
         :param us: us 积分
-        :param stats: plocy 策略
         :return: bool
         """
         # if _open.tem >= _open.all_user:
@@ -227,7 +225,7 @@ class Embyservice:
         if new_user.status_code == 200 or 204:
             try:
                 id = new_user.json()["Id"]
-                pwd = await pwd_create(8) if stats != 'o' else 5210
+                pwd = await pwd_create(8)
                 pwd_data = pwd_policy(id, new=pwd)
                 _pwd = r.post(f'{self.url}/emby/Users/{id}/Password',
                               headers=self.headers,
@@ -240,49 +238,37 @@ class Embyservice:
                                  headers=self.headers,
                                  json=policy)  # .encode('utf-8')
                 if _policy.status_code == 200 or 204:
-                    if stats == 'y':
-                        sql_update_emby(Emby.tg == tg, embyid=id, name=name, pwd=pwd, pwd2=pwd2, lv='b',
-                                        cr=datetime.now(), ex=ex)
-                    elif stats == 'n':
-                        sql_update_emby(Emby.tg == tg, embyid=id, name=name, pwd=pwd, pwd2=pwd2, lv='b',
-                                        cr=datetime.now(), ex=ex,
-                                        us=0)
-                    elif stats == 'o':
-                        sql_add_emby2(embyid=id, name=name, cr=datetime.now(), ex=ex)
+                    sql_update_emby(Emby.tg == tg, embyid=id, name=name, pwd=pwd, pwd2=pwd2, lv='b',
+                                    cr=datetime.now(), ex=ex, us=0)
 
                     if schedall.check_ex:
                         ex = ex.strftime("%Y-%m-%d %H:%M:%S")
-                    elif schedall.low_activity:
-                        ex = '__若21天无观看将封禁__'
                     else:
-                        ex = '__无活跃要求，放心食用__'
+                        ex = '__无需保号，放心食用__'
                     return pwd, ex
         elif new_user.status_code == 400:
             return 400
 
-    async def emby_del(self, id, stats=None):
+    async def emby_del(self, id):
         """
         删除账户
         :param id: emby_id
         :return: bool
         """
+        managed_user = sql_get_emby(id)
         res = r.delete(f'{self.url}/emby/Users/{id}', headers=self.headers)
         if res.status_code == 200 or 204:
             if not sql_delete_favorites_by_embyid(id):
                 LOGGER.warning(f"删除 Emby 账号 {id} 后清理收藏记录失败，不影响主流程")
-            if stats is None:
-                if sql_update_emby(Emby.embyid == id, embyid=None, name=None, pwd=None, pwd2=None, lv='d', cr=None,
-                                   ex=None):
-                    _open.tem = _open.tem - 1
-                    save_config()
-                    return True
-                else:
-                    return False
+            if managed_user is None:
+                return True
+            if sql_update_emby(Emby.embyid == id, embyid=None, name=None, pwd=None, pwd2=None, lv='d', cr=None,
+                               ex=None):
+                _open.tem = max(_open.tem - 1, 0)
+                save_config()
+                return True
             else:
-                if sql_delete_emby2(embyid=id):
-                    return True
-                else:
-                    return False
+                return False
         else:
             return False
 
@@ -397,27 +383,6 @@ class Embyservice:
             embyid = res.json()["User"]["Id"]
             return True, embyid
         return False, 0
-
-    async def emby_cust_commit(self, user_id=None, days=7, method=None):
-        _url = f'{self.url}/emby/user_usage_stats/submit_custom_query'
-        sub_time = datetime.now(timezone(timedelta(hours=8)))
-        start_time = (sub_time - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
-        end_time = sub_time.strftime("%Y-%m-%d %H:%M:%S")
-        sql = ''
-        if method == 'sp':
-            sql += "SELECT UserId, SUM(PlayDuration - PauseDuration) AS WatchTime FROM PlaybackActivity "
-            sql += f"WHERE DateCreated >= '{start_time}' AND DateCreated < '{end_time}' GROUP BY UserId ORDER BY WatchTime DESC"
-        else:
-            return None
-        data = {"CustomQueryString": sql, "ReplaceUserId": True}  # user_name
-        # print(sql)
-        resp = r.post(_url, headers=self.headers, json=data, timeout=30)
-        if resp.status_code == 200:
-            # print(resp.json())
-            rst = resp.json()["results"]
-            return rst
-        else:
-            return None
 
     async def users(self):
         """

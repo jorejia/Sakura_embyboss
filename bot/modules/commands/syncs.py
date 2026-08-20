@@ -20,7 +20,6 @@ from bot.func_helper.emby import emby
 from bot.func_helper.filters import admins_on_filter
 from bot.sql_helper.sql_emby import get_all_emby, Emby, sql_get_emby, sql_update_embys, sql_delete_emby
 from bot.func_helper.msg_utils import deleteMessage, sendMessage, sendPhoto
-from bot.sql_helper.sql_emby2 import sql_get_emby2
 
 
 @bot.on_message(filters.command('syncgroupm', prefixes) & admins_on_filter)
@@ -95,14 +94,14 @@ async def sync_emby_unbound(_, msg):
                 # 消灭不是管理员的账号
                 if v['Policy'] and not bool(v['Policy']['IsAdministrator']):
                     embyid = v['Id']
-                    # 查询无异常，并且无sql记录
+                    # 未来只以 emby 主表为准；没有主表记录的账号视为未绑定。
                     e = sql_get_emby(embyid)
                     if e is None:
-                        e1 = sql_get_emby2(name=embyid)
-                        if e1 is None:
+                        if await emby.emby_del(embyid):
                             a += 1
-                            await emby.emby_del(embyid)
                             text += f"🎯 #{v['Name']} 未绑定bot，删除\n"
+                        else:
+                            text += f"🌧️ #{v['Name']} 未绑定bot，删除失败\n"
             except Exception as e:
                 LOGGER.warning(e)
         # 防止触发 MESSAGE_TOO_LONG 异常

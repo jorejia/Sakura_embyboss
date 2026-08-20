@@ -5,7 +5,7 @@ kk - 纯装x
 import pyrogram
 from pyrogram import filters
 from pyrogram.errors import BadRequest
-from bot import bot, prefixes, owner, bot_photo, admins, LOGGER, extra_emby_libs, default_line_id, line_options
+from bot import bot, prefixes, owner, bot_photo, admins, LOGGER, default_line_id, line_options
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import admins_on_filter
 from bot.func_helper.fix_bottons import cr_kk_ikb, gog_rester_ikb
@@ -250,64 +250,6 @@ async def kk_user_ban(_, call):
             await bot.send_message(b, text)
         except Exception as error:
             LOGGER.warning(f'【/kk 封禁操作】通知未识别用户 {b} 失败：{error}')
-
-
-# 开通额外媒体库
-@bot.on_callback_query(filters.regex('embyextralib_unblock'))
-async def user_embyextralib_unblock(_, call):
-    if not judge_admins(call.from_user.id):
-        return await call.answer("请不要以下犯上 ok？", show_alert=True)
-    await call.answer(f'🎬 正在为TA开启显示ing')
-    tgid = int(call.data.split("-")[1])
-    e = sql_get_emby(tg=tgid)
-    if e.embyid is None:
-        await editMessage(call, f'💢 ta 没有注册账户。', timer=60)
-    embyid = e.embyid
-    success, rep = emby.user(embyid=embyid)
-    currentblock = []
-    if success:
-        try:
-            currentblock = list(set(rep["Policy"]["BlockedMediaFolders"] + ['播放列表']))
-            # 保留不同的元素
-            currentblock = [x for x in currentblock if x not in extra_emby_libs] + [x for x in extra_emby_libs if
-                                                                                    x not in currentblock]
-        except KeyError:
-            currentblock = ["播放列表"]
-        re = await emby.emby_block(embyid, 0, block=currentblock)
-        if re is True:
-            await editMessage(call, f'🌟 好的，管理员 [{call.from_user.first_name}](tg://user?id={call.from_user.id})\n'
-                                    f'已开启了 [TA](tg://user?id={tgid}) 的额外媒体库权限\n{extra_emby_libs}')
-        else:
-            await editMessage(call,
-                              f'🌧️ Error！管理员 [{call.from_user.first_name}](tg://user?id={call.from_user.id})\n操作失败请检查设置！')
-
-
-# 隐藏额外媒体库
-@bot.on_callback_query(filters.regex('embyextralib_block'))
-async def user_embyextralib_block(_, call):
-    if not judge_admins(call.from_user.id):
-        return await call.answer("请不要以下犯上 ok？", show_alert=True)
-    await call.answer(f'🎬 正在为TA关闭显示ing')
-    tgid = int(call.data.split("-")[1])
-    e = sql_get_emby(tg=tgid)
-    if e.embyid is None:
-        await editMessage(call, f'💢 ta 没有注册账户。', timer=60)
-    embyid = e.embyid
-    success, rep = emby.user(embyid=embyid)
-    currentblock = []
-    if success:
-        try:
-            currentblock = list(set(rep["Policy"]["BlockedMediaFolders"] + ['播放列表']))
-            currentblock = list(set(currentblock + extra_emby_libs))
-        except KeyError:
-            currentblock = ["播放列表"] + extra_emby_libs
-        re = await emby.emby_block(embyid, 0, block=currentblock)
-        if re is True:
-            await editMessage(call, f'🌟 好的，管理员 [{call.from_user.first_name}](tg://user?id={call.from_user.id})\n'
-                                    f'已关闭了 [TA](tg://user?id={tgid}) 的额外媒体库权限\n{extra_emby_libs}')
-        else:
-            await editMessage(call,
-                              f'🌧️ Error！管理员 [{call.from_user.first_name}](tg://user?id={call.from_user.id})\n操作失败请检查设置！')
 
 
 # 赠送资格

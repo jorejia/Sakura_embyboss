@@ -31,10 +31,8 @@ class UserBuy(BaseModel):
 
 
 class Open(BaseModel):
-    stat: bool
     site: bool
     all_user: int
-    timing: int = 0
     tem: Optional[int] = 0
     allow_code: StrictBool
 
@@ -49,15 +47,9 @@ class Open(BaseModel):
     whitelist: bool
     invite: bool
     leave_ban: bool
-    uplays: bool = True
     exchange_cost: int = 300
     whitelist_cost: int = 9999
     invite_cost: int = 1000
-
-    # 每次创建 Open 对象时被重置为 0
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.timing = 0
 
 
 class Ranks(BaseModel):
@@ -81,11 +73,8 @@ class LineOption(BaseModel):
 class Schedall(BaseModel):
     dayrank: bool = True
     weekrank: bool = True
-    dayplayrank: bool = False
-    weekplayrank: bool = True
     check_ex: bool = True
     check_ex_paused: bool = False
-    low_activity: bool = False
     day_ranks_message_id: int = 0
     week_ranks_message_id: int = 0
     restart_chat_id: int = 0
@@ -142,8 +131,6 @@ class Config(BaseModel):
     emby_url: str
     sidecar_url: str
     emby_block: Optional[List[str]] = []
-    emby_line: str
-    extra_emby_libs: Optional[List[str]] = []
     db_host: str
     db_user: str
     db_pwd: str
@@ -154,7 +141,6 @@ class Config(BaseModel):
     db_docker_name: str = "mysql"
     db_backup_dir: str = "./db_backup"
     db_backup_maxcount: int = 7
-    another_line: Optional[List[str]] = []
     default_line_id: int = 1
     line_options: List[LineOption] = Field(default_factory=lambda: [
         LineOption(id=1, name='直连一线'),

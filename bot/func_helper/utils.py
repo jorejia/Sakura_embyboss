@@ -1,6 +1,6 @@
 import pytz
 
-from bot import bot, _open, save_config, owner, admins, bot_name, ranks, schedall, group
+from bot import bot, _open, save_config, owner, admins, bot_name, ranks, group
 from bot.func_helper.line_access import line_pro_status_text
 from bot.sql_helper.sql_code import sql_add_code
 from bot.sql_helper.sql_emby import sql_get_emby
@@ -44,33 +44,14 @@ async def members_info(tg=None, name=None):
         lv = lv_dict.get(data.lv, '未知')
         if lv == '管理员':
             ex = '+ ∞'
-        elif data.name is not None and schedall.low_activity and not schedall.check_ex:
-            ex = '__若21天无观看将封禁__'
-        elif data.name is not None and not schedall.low_activity and not schedall.check_ex:
-            ex = ' __无需保号，放心食用__'
         else:
             ex = data.ex or '无账户信息'
         line_pro = line_pro_status_text(data.line_pro_ex)
         return name, lv, ex, us, embyid, pwd2, douban, line_pro
 
 
-async def open_check():
-    """
-    对config查询open
-    :return: open_stats, all_user, tem, timing
-    """
-    open_stats = _open.stat
-    all_user = _open.all_user
-    tem = _open.tem
-    timing = _open.timing
-    allow_code = _open.allow_code
-    return open_stats, all_user, tem, timing, allow_code
-
-
 async def tem_alluser():
     _open.tem = _open.tem + 1
-    if _open.tem >= _open.all_user:
-        _open.stat = False
     save_config()
 
 

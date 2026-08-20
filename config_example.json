@@ -16,7 +16,6 @@
   "emby_api": "xxxxx",
   "emby_url": "http://255.255.255.255:8096",
   "sidecar_url": "http://255.255.255.255:8097",
-  "emby_line": "susuyyds.com",
   "default_line_id": 1,
   "line_options": [
     {
@@ -56,14 +55,9 @@
   "emby_block": [
     "nsfw"
   ],
-  "extra_emby_libs": [
-    "电视"
-  ],
   "open": {
-    "stat": false,
     "site": true,
     "all_user": 1000,
-    "timing": 0,
     "tem": 0,
     "allow_code": true,
     "checkin": true,
@@ -71,7 +65,6 @@
     "whitelist": true,
     "invite": false,
     "leave_ban": true,
-    "uplays": true,
     "exchange_cost": 300,
     "whitelist_cost": 9999,
     "invite_cost": 1000
@@ -83,11 +76,8 @@
   "schedall": {
     "dayrank": true,
     "weekrank": true,
-    "dayplayrank": false,
-    "weekplayrank": false,
     "check_ex": true,
     "check_ex_paused": false,
-    "low_activity": false,
     "backup_db": false
   },
   "db_is_docker": true,

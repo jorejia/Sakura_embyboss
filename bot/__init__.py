@@ -36,10 +36,7 @@ schedall = config.schedall
 emby_api = config.emby_api
 emby_url = config.emby_url
 sidecar_url = config.sidecar_url
-emby_line = config.emby_line
 emby_block = config.emby_block
-extra_emby_libs = config.extra_emby_libs
-another_line = config.another_line
 default_line_id = config.default_line_id
 line_options = config.line_options
 # # 数据库
@@ -74,7 +71,7 @@ admin_p = user_p + [
     BotCommand("coins", f"加/减{sakura_b} [管理]"),
     BotCommand("deleted", f"清理死号 [管理]"),
     BotCommand("renew", "调整到期时间 [管理]"),
-    BotCommand("rmemby", "删除用户[包括非tg] [管理]"),
+    BotCommand("rmemby", "删除用户 [管理]"),
     BotCommand("prouser", "增加白名单 [管理]"),
     BotCommand("revuser", "减少白名单 [管理]"),
     BotCommand("rev_white_chanel", "移除皮套人白名单 [管理]"),
@@ -82,15 +79,10 @@ admin_p = user_p + [
     BotCommand("unban_chanel", "解封皮套人 [管理]"),
     BotCommand("syncgroupm", "消灭不在群的人 [管理]"),
     BotCommand("syncunbound", "消灭未绑定bot的emby账户 [管理]"),
-    BotCommand("low_activity", "手动运行活跃检测 [管理]"),
     BotCommand("check_ex", "手动到期检测 [管理]"),
-    BotCommand("uranks", "召唤观影时长榜，失效时用 [管理]"),
     BotCommand("days_ranks", "召唤播放次数日榜，失效时用 [管理]"),
     BotCommand("week_ranks", "召唤播放次数周榜，失效时用 [管理]"),
     BotCommand("embyadmin", "开启emby控制台权限 [管理]"),
-    BotCommand("ucr", "私聊创建非tg的emby用户 [管理]"),
-    BotCommand("uinfo", "查询指定用户名 [管理]"),
-    BotCommand("urm", "删除指定用户名 [管理]"),
     BotCommand("restart", "重启bot [owner]"),
 ]
 
@@ -104,9 +96,6 @@ owner_p = admin_p + [
     BotCommand("backup_db", "手动备份数据库[owner]"),
     BotCommand("config", "开启bot高级控制面板 [owner]")
 ]
-if len(extra_emby_libs) > 0:
-    owner_p += [BotCommand("extraembylibs_blockall", "一键关闭所有用户的额外媒体库 [owner]"),
-                BotCommand("extraembylibs_unblockall", "一键开启所有用户的额外媒体库 [owner]")]
 
 from pyrogram import enums
 from pyromod import Client

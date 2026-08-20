@@ -10,7 +10,6 @@ from bot import bot, default_line_id, group, LOGGER, _open, schedall
 from bot.func_helper.emby import emby
 from bot.func_helper.line_access import revoke_line_pro_access
 from bot.sql_helper.sql_emby import Emby, get_all_emby, sql_update_emby
-from bot.sql_helper.sql_emby2 import get_all_emby2, Emby2, sql_update_emby2
 
 
 async def check_line_pro_expired():
@@ -131,26 +130,5 @@ async def check_expired():
             await sleep(f.value * 1.2)
             send = await bot.send_message(c.tg.text)
             await send.forward(group[0])
-        except Exception as e:
-            LOGGER.error(e)
-
-    rseired = get_all_emby2(and_(Emby2.expired == 0, Emby2.ex < datetime.now()))
-    if rseired is None:
-        return LOGGER.info(f'【封禁检测】- emby2 无数据，跳过')
-    for e in rseired:
-        if await emby.emby_change_policy(id=e.embyid, method=True):
-            if sql_update_emby2(Emby2.embyid == e.embyid, expired=1):
-                text = f"【封禁检测】- 到期封印非TG账户 [{e.name}](google.com?q={e.embyid}) Done！"
-                LOGGER.info(text)
-            else:
-                text = f'【封禁检测】- 到期封印非TG账户：`{e.name}` 数据库更改失败'
-        else:
-            text = '【封禁检测】- 到期封印非TG账户：`{e.name}` embyapi操作失败，请手动'
-        try:
-            await bot.send_message(group[0], text)
-        except FloodWait as f:
-            LOGGER.warning(str(f))
-            await sleep(f.value * 1.2)
-            await bot.send_message(group[0].text)
         except Exception as e:
             LOGGER.error(e)

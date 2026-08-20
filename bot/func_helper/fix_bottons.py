@@ -1,7 +1,7 @@
 from pykeyboard import InlineKeyboard, InlineButton
 from pyrogram.types import InlineKeyboardMarkup
 from pyromod.helpers import ikb, array_chunk
-from bot import chanel, main_group, bot_name, extra_emby_libs, _open, user_buy, sakura_b, schedall, line_options
+from bot import chanel, main_group, bot_name, _open, user_buy, sakura_b, schedall, line_options
 from bot.func_helper.emby import emby
 from bot.func_helper.line_access import configured_line, visible_lines
 from bot.func_helper.utils import judge_admins, members_info, convert_to_beijing_time
@@ -160,19 +160,12 @@ def checkin_menu_ikb(options=None) -> InlineKeyboardMarkup:
 
 """admins ↓"""
 
-gm_ikb_content = ikb([[('⭕ 注册状态', 'open-menu'), ('🎁 生成活动码', 'cr_activity'), ('🎟️ 生成注册', 'cr_link')],
+gm_ikb_content = ikb([[('⭕ 注册上限', 'all_user_limit'), ('🎁 生成活动码', 'cr_activity'), ('🎟️ 生成注册', 'cr_link')],
                       [('💎 生成线路码', 'cr_line'), ('💊 查询注册', 'ch_link'), ('🏷️ 别名设置', 'alias_setting')],
                       [('🏬 兑换设置', 'set_renew')],
                       [('🌏 定时', 'schedall'), ('🕹️ 主界面', 'back_start'), ('其他 🪟', 'back_config')]])
 
 
-def open_menu_ikb(openstats, timingstats) -> InlineKeyboardMarkup:
-    return ikb([[(f'{openstats} 自由注册', 'open_stat'), (f'{timingstats} 定时注册', 'open_timing')],
-                [('⭕ 注册限制', 'all_user_limit')], [('🌟 返回上一级', 'manage')]])
-
-
-back_free_ikb = ikb([[('🔙 返回上一级', 'open-menu')]])
-back_open_menu_ikb = ikb([[('🪪 重新定时', 'open_timing'), ('🔙 注册状态', 'open-menu')]])
 re_cr_link_ikb = ikb([[('♻️ 继续创建', 'cr_link'), ('🎗️ 返回主页', 'manage')]])
 re_cr_activity_ikb = ikb([[('♻️ 继续创建', 'cr_activity'), ('🎗️ 返回主页', 'manage')]])
 re_cr_line_ikb = ikb([[('♻️ 继续创建', 'cr_line'), ('🎗️ 返回主页', 'manage')]])
@@ -198,15 +191,6 @@ async def users_iv_button(i, j, tg) -> InlineKeyboardMarkup:
     keyboard.paginate(i, j, 'users_iv:{number}' + f'_{tg}')
     keyboard.row(
         InlineButton('❌ - Close', f'closeit_{tg}')
-    )
-    return keyboard
-
-
-async def plays_list_button(i, j, days) -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboard()
-    keyboard.paginate(i, j, 'uranks:{number}' + f'_{days}')
-    keyboard.row(
-        InlineButton('❌ - Close', f'closeit')
     )
     return keyboard
 
@@ -248,13 +232,12 @@ def config_preparation() -> InlineKeyboardMarkup:
     code = '✅' if _open.allow_code else '❎'
     buy_stat = '✅' if user_buy.stat else '❎'
     leave_ban = '✅' if _open.leave_ban else '❎'
-    uplays = '✅' if _open.uplays else '❎'
     site = '✅' if _open.site else '❎'
     keyboard = ikb(
-        [[('📄 导出日志', 'log_out'), ('💠 emby线路', 'set_line')],
+        [[('📄 导出日志', 'log_out')],
          [(f'{site} 正常/隐身模式', 'change_site_open')],
          [(f'{code} 注册码续期', 'open_allow_code'), (f'{buy_stat} 开关购买', 'set_buy')],
-         [(f'{leave_ban} 退群封禁', 'leave_ban'), (f'{uplays} 自动看片结算', 'set_uplays')],
+         [(f'{leave_ban} 退群封禁', 'leave_ban')],
          [('🔙 返回', 'manage')]])
     return keyboard
 
@@ -294,17 +277,6 @@ async def cr_kk_ikb(uid, first):
                 keyboard.append(['🎁 赋予直连Pro 1天', f'line_pro_grant-{uid}'])
             else:
                 keyboard.append(['🧹 解除直连Pro', f'line_pro_revoke-{uid}'])
-            if len(extra_emby_libs) > 0:
-                success, rep = emby.user(embyid=embyid)
-                if success:
-                    try:
-                        currentblock = rep["Policy"]["BlockedMediaFolders"]
-                    except KeyError:
-                        currentblock = []
-                    # 此处符号用于展示是否开启的状态
-                    libs, embyextralib = ['✖️', f'embyextralib_unblock-{uid}'] if set(extra_emby_libs).issubset(
-                        set(currentblock)) else ['✔️', f'embyextralib_block-{uid}']
-                    keyboard.append([f'{libs} 额外媒体库', embyextralib])
             last_activity_text = "未知"
             try:
                 success, activity = await emby.get_sidecar_user_last_activity(embyid)
@@ -348,20 +320,14 @@ def gog_rester_ikb(link=None) -> InlineKeyboardMarkup:
 def sched_buttons():
     dayrank = '✅' if schedall.dayrank else '❎'
     weekrank = '✅' if schedall.weekrank else '❎'
-    dayplayrank = '✅' if schedall.dayplayrank else '❎'
-    weekplayrank = '✅' if schedall.weekplayrank else '❎'
     check_ex = '✅' if schedall.check_ex else '❎'
     check_ex_pause_text = '▶️ 恢复到期检测' if schedall.check_ex_paused else '⏸️ 暂停到期检测'
-    low_activity = '✅' if schedall.low_activity else '❎'
     backup_db = '✅' if schedall.backup_db else '❎'
     keyboard = InlineKeyboard(row_width=2)
     keyboard.add(InlineButton(f'{dayrank} 播放日榜', f'sched-dayrank'),
                  InlineButton(f'{weekrank} 播放周榜', f'sched-weekrank'),
-                 InlineButton(f'{dayplayrank} 看片日榜', f'sched-dayplayrank'),
-                 InlineButton(f'{weekplayrank} 看片周榜', f'sched-weekplayrank'),
-                 InlineButton(f'{check_ex} 到期保号', f'sched-check_ex'),
-                 InlineButton(check_ex_pause_text, 'expiry_pause_toggle'),
-                 InlineButton(f'{low_activity} 活跃保号', f'sched-low_activity'),
+                  InlineButton(f'{check_ex} 到期保号', f'sched-check_ex'),
+                  InlineButton(check_ex_pause_text, 'expiry_pause_toggle'),
                  InlineButton(f'{backup_db} 自动备份数据库', f'sched-backup_db'),
                  )
     keyboard.row(InlineButton(f'🫧 返回', 'manage'))

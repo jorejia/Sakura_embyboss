@@ -14,7 +14,7 @@ from datetime import timedelta, datetime
 from pyrogram.errors import BadRequest
 from sqlalchemy import and_
 from bot.schemas import ExDate, Yulv
-from bot import bot, LOGGER, _open, emby_line, sakura_b, ranks, group, extra_emby_libs, config, user_buy, \
+from bot import bot, LOGGER, _open, sakura_b, ranks, group, config, user_buy, \
     bot_name, default_line_id, line_options
 from pyrogram import filters
 from bot.func_helper.emby import emby
@@ -33,11 +33,10 @@ from bot.modules.commands.exchange import rgs_code
 from bot.sql_helper.sql_code import sql_count_c_code
 from bot.sql_helper.sql_emby import sql_claim_line_pro_trial, sql_get_emby, sql_update_emby, sql_rebind_emby, Emby, \
     sql_delete_emby
-from bot.sql_helper.sql_emby2 import sql_get_emby2, sql_delete_emby2
 from bot.sql_helper import Session
 
 # 创号函数
-async def create_user(_, call, us, stats):
+async def create_user(_, call, us):
     same = await editMessage(call,
                              text='🤖**注意：您已进入注册状态:\n\n• 请在2min内输入 `[用户名][空格][安全码]`\n• 举个例子🌰：`username 1234`**\n\n• 用户名尽量使用英文，用于emby登陆'
                                   '\n• 安全码用于重置密码等操作，请填入最熟悉的数字4~6位；退出请点 /cancel')
@@ -74,7 +73,7 @@ async def create_user(_, call, us, stats):
                                              re_create_ikb)
             # await asyncio.sleep(1)
             # emby api操作
-            pwd1 = await emby.emby_create(call.from_user.id, emby_name, emby_pwd2, us, stats)
+            pwd1 = await emby.emby_create(call.from_user.id, emby_name, emby_pwd2, us)
             if pwd1 == 403:
                 await editMessage(call, '**🚫 很抱歉，注册总数已达限制。**', back_members_ikb)
             elif pwd1 == 100:
@@ -91,10 +90,7 @@ async def create_user(_, call, us, stats):
                                   f'· 到期时间 | {pwd1[1]}\n'
                                   f'· 服务器地址 | 见下方用户手册，请认真看使用限制，否则连不上\n\n'
                                   f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 手册口令 a1234**')
-                if stats == 'y':
-                    LOGGER.info(f"【创建账户】[开注状态]：{call.from_user.id} - 建立了 {emby_name} ")
-                elif stats == 'n':
-                    LOGGER.info(f"【创建账户】：{call.from_user.id} - 建立了 {emby_name} ")
+                LOGGER.info(f"【创建账户】：{call.from_user.id} - 建立了 {emby_name} ")
                 await tem_alluser()
 
 
@@ -133,15 +129,15 @@ async def create(_, call):
 
     if e.embyid:
         await callAnswer(call, '💦 你已经有账户啦！请勿重复注册。', True)
-    elif not _open.stat and int(e.us) <= 0:
+    elif int(e.us) <= 0:
         await callAnswer(call, f'🤖 当前没有可注册时长，请先使用注册码', True)
-    elif not _open.stat and int(e.us) > 0:
+    else:
         if _open.tem < _open.all_user:
             send = await callAnswer(call, f'🪙 欢迎注册 MICU Cloud Media，请稍后。', True)
             if send is False:
                 return
             else:
-                await create_user(_, call, us=e.us, stats='n')
+                await create_user(_, call, us=e.us)
         else:
             if e.invite == 'y':
                 send = await callAnswer(call, f'🪙 欢迎注册 MICU Cloud Media，请稍后。', True)
@@ -149,17 +145,9 @@ async def create(_, call):
                     return
                 else:
                     sql_update_emby(Emby.tg == call.from_user.id, invite='n')
-                    await create_user(_, call, us=e.us, stats='n')
+                    await create_user(_, call, us=e.us)
             else:
                 send = await callAnswer(call, f'🤖 当前服务器人数已达上限，无法注册，请耐心等待。', True)
-
-
-    elif _open.stat:
-        send = await callAnswer(call, f"🪙 开放注册，免除积分要求。", True)
-        if send is False:
-            return
-        else:
-            await create_user(_, call, us=30, stats='y')
 
 
 # 换绑tg
@@ -298,33 +286,28 @@ async def bind_tg(_, call):
                           f'✔️ 会话结束，收到设置\n\n用户名：**{emby_name}** 正在检查密码 **{emby_pwd}**......')
         e = sql_get_emby(tg=emby_name)
         if e is None:
-            e2 = sql_get_emby2(name=emby_name)
-            if e2 is None:
-                success, embyid = await emby.authority_account(call.from_user.id, emby_name, emby_pwd)
-                if not success:
-                    return await editMessage(call,
-                                             f'🍥 很遗憾绑定失败，您输入的账户密码不符（{emby_name} - {emby_pwd}），请仔细确认后再次尝试',
-                                             buttons=re_bindtg_ikb)
-                else:
-                    pwd = ['空（直接回车）', 5210] if emby_pwd == 'None' else [emby_pwd, emby_pwd]
-                    ex = (datetime.now() + timedelta(days=30))
-                    text = f'✅ 账户 {emby_name} 成功绑定\n\n' \
-                           f'· 用户名称 | `{emby_name}`\n' \
-                           f'· 登陆密码 | `{pwd[0]}`\n' \
-                           f'· 安全码 | {pwd[1]}（仅用于重置密码）\n' \
-                           f'· 到期时间 | {ex}\n' \
-                           f'· 服务器地址 | 见下方用户手册，请认真看使用限制，否则连不上\n\n' \
-                           f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 手册口令 a1234**'
-                    sql_update_emby(Emby.tg == call.from_user.id, embyid=embyid, name=emby_name, pwd=emby_pwd,
-                                    pwd2=emby_pwd, lv='b', cr=datetime.now(), ex=ex)
-                    await editMessage(call, text)
-                    await sendMessage(call,
-                                      f'⭕#新TG绑定 原emby账户 #{emby_name} \n\n已绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
-                                      send=True)
-                    LOGGER.info(
-                        f'【新TG绑定】 emby账户 {emby_name} 绑定至 {call.from_user.first_name}-{call.from_user.id}')
-            else:
-                await editMessage(call, '🔍 数据库已有此账户，不可绑定，请使用 **换绑TG**', buttons=re_changetg_ikb)
+            success, embyid = await emby.authority_account(call.from_user.id, emby_name, emby_pwd)
+            if not success:
+                return await editMessage(call,
+                                         f'🍥 很遗憾绑定失败，您输入的账户密码不符（{emby_name} - {emby_pwd}），请仔细确认后再次尝试',
+                                         buttons=re_bindtg_ikb)
+            pwd = ['空（直接回车）', 5210] if emby_pwd == 'None' else [emby_pwd, emby_pwd]
+            ex = (datetime.now() + timedelta(days=30))
+            text = f'✅ 账户 {emby_name} 成功绑定\n\n' \
+                   f'· 用户名称 | `{emby_name}`\n' \
+                   f'· 登陆密码 | `{pwd[0]}`\n' \
+                   f'· 安全码 | {pwd[1]}（仅用于重置密码）\n' \
+                   f'· 到期时间 | {ex}\n' \
+                   f'· 服务器地址 | 见下方用户手册，请认真看使用限制，否则连不上\n\n' \
+                   f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 手册口令 a1234**'
+            sql_update_emby(Emby.tg == call.from_user.id, embyid=embyid, name=emby_name, pwd=emby_pwd,
+                            pwd2=emby_pwd, lv='b', cr=datetime.now(), ex=ex)
+            await editMessage(call, text)
+            await sendMessage(call,
+                              f'⭕#新TG绑定 原emby账户 #{emby_name} \n\n已绑定至 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) - {call.from_user.id}',
+                              send=True)
+            LOGGER.info(
+                f'【新TG绑定】 emby账户 {emby_name} 绑定至 {call.from_user.first_name}-{call.from_user.id}')
         else:
             await editMessage(call, '🔍 数据库已有此账户，不可绑定，请使用 **换绑TG**', buttons=re_changetg_ikb)
 
@@ -486,7 +469,7 @@ async def user_emby_block(_, call):
         try:
             currentblock = list(set(rep["Policy"]["BlockedMediaFolders"] + config.emby_block + ['播放列表']))
         except KeyError:
-            currentblock = ['播放列表'] + extra_emby_libs + config.emby_block
+            currentblock = ['播放列表'] + config.emby_block
         re = await emby.emby_block(embyid, 0, block=currentblock)
         if re is True:
             send1 = await editMessage(call, f'🕶️ ο(=•ω＜=)ρ⌒☆\n 小尾巴隐藏好了！ ', buttons=user_emby_block_ikb)
@@ -512,7 +495,7 @@ async def user_emby_unblock(_, call):
             currentblock = [x for x in currentblock if x not in config.emby_block] + [x for x in config.emby_block if
                                                                                       x not in currentblock]
         except KeyError:
-            currentblock = ['播放列表'] + extra_emby_libs
+            currentblock = ['播放列表']
         re = await emby.emby_block(embyid, 0, block=currentblock)
         if re is True:
             # await embyblock(_, call)

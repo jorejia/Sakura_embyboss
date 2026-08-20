@@ -1,4 +1,3 @@
-from .userplays_rank import Uplaysinfo
 from .backup_db import DbBackupUtils
 from .bot_commands import BotCommands
 from .check_ex import check_expired

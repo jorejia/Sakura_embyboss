@@ -97,8 +97,6 @@ async def rgs_code(_, msg, register_code):
     code_type = code_info[0]
     if code_type == 'l':
         return await _redeem_line_code(msg, register_code, data)
-    if _open.stat:
-        return await sendMessage(msg, "🤧 自由注册开启下无法使用注册码。")
     if code_type == 'a':
         if embyid:
             return await sendMessage(msg, "🔔 **已有账号**\n活动码只能无账号的情况下使用哦~", timer=60)
