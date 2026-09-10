@@ -4,15 +4,17 @@
 """
 from pyrogram import filters
 
-from bot import bot, _open, save_config, LOGGER, bot_name
+from bot import bot, _open, save_config, LOGGER, bot_name, default_line_id
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import admins_on_filter
+from bot.func_helper.line_access import revoke_line_pro_access
 from bot.sql_helper.sql_code import (
     sql_ban_used_code,
     sql_delete_unused_code,
     sql_delete_used_code,
     sql_get_activity_code_usage,
     sql_get_code,
+    sql_revoke_line_pro_code,
 )
 from bot.sql_helper.sql_emby import sql_count_emby
 from bot.func_helper.fix_bottons import gm_ikb_content, \
@@ -454,6 +456,50 @@ async def ban_used_code(_, call):
             f'· 使用者 | [{tg}](tg://user?id={tg})\n'
             f'· 已扣除 | **{days} 天**{expiry_text}{notify_text}',
             buttons=code_query_ikb(),
+        )
+
+    if status == 'revoke_line_required':
+        tg = result['tg']
+        revoke_result = None
+
+        def clear_line_pro_and_code():
+            nonlocal revoke_result
+            revoke_result = sql_revoke_line_pro_code(code, tg)
+            return revoke_result in ('revoked', 'not_found')
+
+        revoked, failed_stage, detail = await revoke_line_pro_access(
+            result['embyid'],
+            default_line_id,
+            emby.set_use_line,
+            clear_line_pro_and_code,
+        )
+        if revoked:
+            notified = await _notify_illegal_code_user(
+                tg,
+                '您因使用非法注册码，现已清除直连Pro资格。',
+            )
+            LOGGER.info(
+                f'【封禁线路码】管理员 {call.from_user.id} 封禁并删除 {code}，'
+                f'用户 {tg} 的直连 Pro 时长不足，已清除 Pro 资格并切回默认线路 {default_line_id}'
+            )
+            notify_text = '' if notified else '\n\n⚠️ 处罚已生效，但机器人私聊通知发送失败。'
+            return await editMessage(
+                call,
+                f'🚫 线路码 `{code}` 已封禁并删除\n'
+                f'· 使用者 | [{tg}](tg://user?id={tg})\n'
+                f'· 处理结果 | **直连 Pro 时长不足，已清除 Pro 资格**\n'
+                f'· Emby 账号 | **保留，不受影响**{notify_text}',
+                buttons=code_query_ikb(),
+            )
+
+        failure_text = '切回默认线路失败' if failed_stage == 'line' else f'清除 Pro 资格失败（{revoke_result}）'
+        LOGGER.error(
+            f'【封禁线路码】用户 {tg} 处理失败：{failure_text}，detail={detail}，注册码保留以便重试'
+        )
+        return await editMessage(
+            call,
+            f'❌ 线路码 `{code}` 处理失败：{failure_text}。账号及注册码已保留，可稍后重试。',
+            buttons=code_query_ikb(code, can_ban=True),
         )
 
     if status == 'delete_required':

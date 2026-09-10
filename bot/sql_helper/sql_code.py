@@ -103,8 +103,8 @@ def sql_delete_unused_code(code):
 def sql_ban_used_code(code, now=None):
     """处罚已使用注册码，并在扣除成功后原子删除该码。
 
-    普通码扣账号/预注册时长，直连 Pro 码扣 Pro 时长。如果实际账号
-    扣除后已经没有有效时长，则交由调用方删除账号，成功后再删除码。
+    普通码扣账号/预注册时长，直连 Pro 码扣 Pro 时长。普通码扣除后
+    账号时长不足时交由调用方删号；Pro 时长不足时仅清除 Pro 资格。
     """
     now = (now or datetime.now()).replace(microsecond=0)
     with Session() as session:
@@ -147,6 +147,13 @@ def sql_ban_used_code(code, now=None):
             new_expiry = expires_at - timedelta(days=days) if expires_at else None
 
             if new_expiry is None or new_expiry <= now:
+                if expiry_kind == 'line_pro':
+                    return {
+                        'status': 'revoke_line_required',
+                        'tg': record.used,
+                        'days': days,
+                        'embyid': user.embyid,
+                    }
                 return {
                     'status': 'delete_required',
                     'tg': record.used,
@@ -174,6 +181,28 @@ def sql_ban_used_code(code, now=None):
         except Exception:
             session.rollback()
             return {'status': 'error'}
+
+
+def sql_revoke_line_pro_code(code, expected_tg):
+    """清除非法线路码对应的 Pro 资格，并在同一事务中删除线路码。"""
+    with Session() as session:
+        try:
+            record = session.query(Code).filter(Code.code == code).with_for_update().first()
+            if record is None:
+                return 'not_found'
+            if record.invite != 'l' or record.used != expected_tg:
+                return 'mismatch'
+
+            user = session.query(Emby).filter(Emby.tg == expected_tg).with_for_update().first()
+            if user is None:
+                return 'user_not_found'
+            user.line_pro_ex = None
+            session.delete(record)
+            session.commit()
+            return 'revoked'
+        except Exception:
+            session.rollback()
+            return 'error'
 
 
 def sql_delete_used_code(code, expected_tg):

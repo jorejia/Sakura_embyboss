@@ -39,7 +39,21 @@ class CodeQueryTests(unittest.TestCase):
         self.assertIn('expires_at - timedelta(days=days)', sql_source)
         self.assertIn('session.delete(record)', sql_source)
         self.assertNotIn('bannedtime', sql_source)
+        self.assertIn("if expiry_kind == 'line_pro':", sql_source)
+        self.assertIn("'status': 'revoke_line_required'", sql_source)
+        self.assertIn('def sql_revoke_line_pro_code(code, expected_tg):', sql_source)
+        self.assertIn('user.line_pro_ex = None', sql_source)
+        self.assertIn('await revoke_line_pro_access(', panel_source)
+        self.assertIn('Emby 账号 | **保留，不受影响**', panel_source)
         self.assertIn('await emby.emby_del(result[\'embyid\'])', panel_source)
+        self.assertLess(
+            sql_source.index("'status': 'revoke_line_required'"),
+            sql_source.index("'status': 'delete_required'"),
+        )
+        self.assertLess(
+            panel_source.index("if status == 'revoke_line_required':"),
+            panel_source.index("if status == 'delete_required':"),
+        )
         self.assertIn('sql_delete_used_code(code, tg)', panel_source)
         self.assertIn('您因使用非法注册码，现已扣除 {days} 天时长。', panel_source)
         self.assertIn('您因使用非法注册码，现已被删除账号。', panel_source)
