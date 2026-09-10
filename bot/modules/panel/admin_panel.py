@@ -7,7 +7,13 @@ from pyrogram import filters
 from bot import bot, _open, save_config, LOGGER, bot_name
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import admins_on_filter
-from bot.sql_helper.sql_code import sql_delete_unused_code, sql_get_code, sql_get_activity_code_usage
+from bot.sql_helper.sql_code import (
+    sql_ban_used_code,
+    sql_delete_unused_code,
+    sql_delete_used_code,
+    sql_get_activity_code_usage,
+    sql_get_code,
+)
 from bot.sql_helper.sql_emby import sql_count_emby
 from bot.func_helper.fix_bottons import gm_ikb_content, \
     re_cr_link_ikb, re_cr_activity_ikb, re_cr_line_ikb, close_it_ikb, activity_usage_ikb, code_query_ikb, \
@@ -380,7 +386,11 @@ async def ch_link(_, call):
     await editMessage(
         call,
         _code_info_text(record),
-        buttons=code_query_ikb(record.code, can_delete=record.used is None),
+        buttons=code_query_ikb(
+            record.code,
+            can_delete=record.used is None,
+            can_ban=record.used is not None,
+        ),
     )
 
 
@@ -406,6 +416,101 @@ async def delete_unused_code(_, call):
         await callAnswer(call, '❌ 该码已不存在', True)
         return await editMessage(call, f'❌ 注册码 `{code}` 已不存在', buttons=code_query_ikb())
     return await callAnswer(call, '❌ 数据库删除失败，请稍后重试', True)
+
+
+async def _notify_illegal_code_user(tg, text):
+    try:
+        await bot.send_message(tg, text)
+        return True
+    except Exception as error:
+        LOGGER.warning(f'【封禁注册码】无法通知用户 {tg}：{error}')
+        return False
+
+
+@bot.on_callback_query(filters.regex(r'^rcode_ban:') & admins_on_filter)
+async def ban_used_code(_, call):
+    code = call.data.split(':', 1)[1]
+    await callAnswer(call, '⏳ 正在封禁并扣除时长')
+    result = sql_ban_used_code(code)
+    status = result['status']
+
+    if status == 'deducted':
+        days = result['days']
+        tg = result['tg']
+        notified = await _notify_illegal_code_user(
+            tg,
+            f'您因使用非法注册码，现已扣除 {days} 天时长。',
+        )
+        LOGGER.info(f'【封禁注册码】管理员 {call.from_user.id} 封禁并删除 {code}，用户 {tg} 被扣除 {days} 天')
+        expiry_text = ''
+        if result['expires_at'] is not None:
+            expiry_text = f'\n· 扣除后到期 | **{result["expires_at"].strftime("%Y-%m-%d %H:%M:%S")}**'
+        elif result['expiry_kind'] == 'preregister':
+            expiry_text = f'\n· 剩余预注册时长 | **{result["remaining_days"]} 天**'
+        notify_text = '' if notified else '\n\n⚠️ 处罚已生效，但机器人私聊通知发送失败。'
+        return await editMessage(
+            call,
+            f'🚫 注册码 `{code}` 已封禁并删除\n'
+            f'· 使用者 | [{tg}](tg://user?id={tg})\n'
+            f'· 已扣除 | **{days} 天**{expiry_text}{notify_text}',
+            buttons=code_query_ikb(),
+        )
+
+    if status == 'delete_required':
+        tg = result['tg']
+        if await emby.emby_del(result['embyid']):
+            delete_code_status = sql_delete_used_code(code, tg)
+            notified = await _notify_illegal_code_user(
+                tg,
+                '您因使用非法注册码，现已被删除账号。',
+            )
+            LOGGER.info(
+                f'【封禁注册码】管理员 {call.from_user.id} 处理 {code}，'
+                f'用户 {tg} 时长不足，账号 {result["name"]} 已删除，'
+                f'注册码删除结果：{delete_code_status}'
+            )
+            notify_text = '' if notified else '\n\n⚠️ 账号已删除，但机器人私聊通知发送失败。'
+            code_text = ''
+            if delete_code_status not in ('deleted', 'not_found'):
+                code_text = f'\n\n⚠️ 账号已删除，但注册码删除失败（{delete_code_status}），请检查数据库。'
+            return await editMessage(
+                call,
+                f'🚫 注册码 `{code}` 封禁操作完成\n'
+                f'· 使用者 | [{tg}](tg://user?id={tg})\n'
+                f'· 处理结果 | **扣除后时长不足，账号已删除**{notify_text}{code_text}',
+                buttons=code_query_ikb(),
+            )
+
+        LOGGER.error(
+            f'【封禁注册码】删除用户 {tg} 的 Emby 账号 {result["embyid"]} 失败，注册码保留以便重试'
+        )
+        return await editMessage(
+            call,
+            f'❌ 注册码 `{code}` 对应账号删除失败，注册码已保留，可稍后重试',
+            buttons=code_query_ikb(code, can_ban=True),
+        )
+
+    messages = {
+        'not_found': '❌ 该注册码已不存在',
+        'unused': '❌ 该注册码尚未使用，不能封禁',
+        'user_not_found': '❌ 未找到使用该码的用户资料',
+        'no_account': '❌ 使用者当前没有账号或可扣除时长',
+        'invalid_duration': '❌ 注册码时长无效，无法执行扣除',
+        'error': '❌ 数据库操作失败，请稍后重试',
+    }
+    error_text = messages.get(status, '❌ 封禁失败，请稍后重试')
+    record = sql_get_code(code)
+    if record is not None:
+        return await editMessage(
+            call,
+            f'{error_text}\n\n{_code_info_text(record)}',
+            buttons=code_query_ikb(
+                record.code,
+                can_delete=record.used is None,
+                can_ban=record.used is not None,
+            ),
+        )
+    return await editMessage(call, error_text, buttons=code_query_ikb())
 
 
 @bot.on_callback_query(filters.regex('set_renew'))

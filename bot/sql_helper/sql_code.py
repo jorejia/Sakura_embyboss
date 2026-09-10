@@ -1,6 +1,8 @@
 import math
+from datetime import datetime, timedelta
 
 from bot.sql_helper import Base, Session, engine
+from bot.sql_helper.sql_emby import Emby
 from sqlalchemy import Column, BigInteger, String, DateTime, Integer, or_, and_, case, func
 from cacheout import Cache
 
@@ -90,6 +92,99 @@ def sql_delete_unused_code(code):
                 return 'not_found'
             if record.used is not None:
                 return 'used'
+            session.delete(record)
+            session.commit()
+            return 'deleted'
+        except Exception:
+            session.rollback()
+            return 'error'
+
+
+def sql_ban_used_code(code, now=None):
+    """处罚已使用注册码，并在扣除成功后原子删除该码。
+
+    普通码扣账号/预注册时长，直连 Pro 码扣 Pro 时长。如果实际账号
+    扣除后已经没有有效时长，则交由调用方删除账号，成功后再删除码。
+    """
+    now = (now or datetime.now()).replace(microsecond=0)
+    with Session() as session:
+        try:
+            record = session.query(Code).filter(Code.code == code).with_for_update().first()
+            if record is None:
+                return {'status': 'not_found'}
+            if record.used is None:
+                return {'status': 'unused'}
+
+            user = session.query(Emby).filter(Emby.tg == record.used).with_for_update().first()
+            if user is None:
+                return {'status': 'user_not_found', 'tg': record.used}
+
+            days = int(record.us or 0)
+            if days <= 0:
+                return {'status': 'invalid_duration', 'tg': record.used}
+
+            # 尚未创建 Emby 账号时，注册码时长保存在 us 中。
+            if not user.embyid:
+                available_days = max(int(user.us or 0), 0)
+                if available_days == 0:
+                    return {'status': 'no_account', 'tg': record.used}
+                deducted_days = min(days, available_days)
+                user.us = available_days - deducted_days
+                used_tg = record.used
+                session.delete(record)
+                session.commit()
+                return {
+                    'status': 'deducted',
+                    'tg': used_tg,
+                    'days': deducted_days,
+                    'remaining_days': user.us,
+                    'expiry_kind': 'preregister',
+                    'expires_at': None,
+                }
+
+            expiry_kind = 'line_pro' if record.invite == 'l' else 'account'
+            expires_at = user.line_pro_ex if expiry_kind == 'line_pro' else user.ex
+            new_expiry = expires_at - timedelta(days=days) if expires_at else None
+
+            if new_expiry is None or new_expiry <= now:
+                return {
+                    'status': 'delete_required',
+                    'tg': record.used,
+                    'days': days,
+                    'embyid': user.embyid,
+                    'name': user.name,
+                    'expiry_kind': expiry_kind,
+                }
+
+            if expiry_kind == 'line_pro':
+                user.line_pro_ex = new_expiry
+            else:
+                user.ex = new_expiry
+            used_tg = record.used
+            session.delete(record)
+            session.commit()
+            return {
+                'status': 'deducted',
+                'tg': used_tg,
+                'days': days,
+                'remaining_days': None,
+                'expiry_kind': expiry_kind,
+                'expires_at': new_expiry,
+            }
+        except Exception:
+            session.rollback()
+            return {'status': 'error'}
+
+
+def sql_delete_used_code(code, expected_tg):
+    """账号处罚完成后删除对应的已使用注册码。"""
+    with Session() as session:
+        try:
+            record = session.query(Code).filter(Code.code == code).with_for_update().first()
+            if record is None:
+                return 'not_found'
+            if record.used is None or record.used != expected_tg:
+                return 'mismatch'
             session.delete(record)
             session.commit()
             return 'deleted'

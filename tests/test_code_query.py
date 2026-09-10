@@ -25,6 +25,25 @@ class CodeQueryTests(unittest.TestCase):
         self.assertIn('if record.used is not None:', sql_source)
         self.assertIn('session.delete(record)', sql_source)
 
+    def test_ban_is_offered_for_used_code_and_deletes_code_after_penalty(self):
+        root = Path(__file__).parents[1]
+        panel_source = (root / 'bot' / 'modules' / 'panel' / 'admin_panel.py').read_text(encoding='utf-8')
+        sql_source = (root / 'bot' / 'sql_helper' / 'sql_code.py').read_text(encoding='utf-8')
+        button_source = (root / 'bot' / 'func_helper' / 'fix_bottons.py').read_text(encoding='utf-8')
+
+        self.assertIn("('🚫 封禁注册码', f'rcode_ban:{code}')", button_source)
+        self.assertIn("filters.regex(r'^rcode_ban:')", panel_source)
+        self.assertIn('can_ban=record.used is not None', panel_source)
+        self.assertIn('def sql_ban_used_code(code, now=None):', sql_source)
+        self.assertIn('with_for_update().first()', sql_source)
+        self.assertIn('expires_at - timedelta(days=days)', sql_source)
+        self.assertIn('session.delete(record)', sql_source)
+        self.assertNotIn('bannedtime', sql_source)
+        self.assertIn('await emby.emby_del(result[\'embyid\'])', panel_source)
+        self.assertIn('sql_delete_used_code(code, tg)', panel_source)
+        self.assertIn('您因使用非法注册码，现已扣除 {days} 天时长。', panel_source)
+        self.assertIn('您因使用非法注册码，现已被删除账号。', panel_source)
+
 
 if __name__ == '__main__':
     unittest.main()

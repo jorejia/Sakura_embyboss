@@ -173,10 +173,12 @@ close_it_ikb = ikb([[('❌ - Close', 'closeit')]])
 activity_usage_ikb = ikb([[('🔍 查询使用', 'activity_usage'), ('❌ - Close', 'closeit')]])
 
 
-def code_query_ikb(code=None, can_delete=False) -> InlineKeyboardMarkup:
+def code_query_ikb(code=None, can_delete=False, can_ban=False) -> InlineKeyboardMarkup:
     rows = []
     if can_delete and code:
         rows.append([('🗑 删除注册码', f'rcode_delete:{code}')])
+    if can_ban and code:
+        rows.append([('🚫 封禁注册码', f'rcode_ban:{code}')])
     rows.append([('🔍 继续查询', 'ch_link'), ('💫 回到首页', 'manage')])
     return ikb(rows)
 
