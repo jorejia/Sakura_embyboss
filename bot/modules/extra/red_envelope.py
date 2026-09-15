@@ -28,6 +28,7 @@ pending_red_confirmations = {}
 
 MIN_RED_MEMBERS = 3
 RED_CONFIRM_TTL_SECONDS = 20
+RANK_TTL_SECONDS = 180
 
 
 async def _expire_red_confirmation(confirm_id):
@@ -285,7 +286,7 @@ async def s_rank(_, msg):
     button = await users_iv_button(i, 1, sender)
     await asyncio.gather(reply.delete(),
                          sendPhoto(msg, photo=bot_photo, caption=f'**▎🏆 {sakura_b}风云录**\n\n{t}', buttons=button,
-                                   timer=300))
+                                   timer=RANK_TTL_SECONDS))
 
 
 async def resolve_rank_user_names(user_ids):
@@ -310,7 +311,7 @@ async def resolve_rank_user_names(user_ids):
         return {}
 
 
-@cache.memoize(ttl=120)
+@cache.memoize(ttl=RANK_TTL_SECONDS)
 async def users_iv_rank():
     with Session() as session:
         top_rows = session.query(Emby.tg, Emby.iv).filter(Emby.iv > 0).order_by(Emby.iv.desc()).limit(100).all()
