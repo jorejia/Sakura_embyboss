@@ -56,18 +56,21 @@ LOGGER.info("配置文件加载完毕")
 from pyrogram.types import BotCommand
 
 '''定义不同等级的人使用不同命令'''
-user_p = [
+private_user_p = [
     BotCommand("start", "开启面板"),
     BotCommand("myinfo", "我的信息"),
-    BotCommand("red", "发红包！"),
+]
+
+group_user_p = [
+    BotCommand("red", "发红包！[米币] [份数]"),
     BotCommand("srank", "召唤米币排行榜 [花费2米币]")
 ]
 
 # 取消 BotCommand("exchange", "[私聊] 使用注册码")
-admin_p = user_p + [
+admin_only_p = [
     BotCommand("kk", "管理用户 [管理]"),
     BotCommand("dd", "查询豆瓣ID [管理]"),
-    BotCommand("score", "加/减积分 [管理]"),
+    BotCommand("score", "加/减未用天数 [管理]"),
     BotCommand("coins", f"加/减{sakura_b} [管理]"),
     BotCommand("deleted", f"清理死号 [管理]"),
     BotCommand("renew", "调整到期时间 [管理]"),
@@ -82,11 +85,11 @@ admin_p = user_p + [
     BotCommand("check_ex", "手动到期检测 [管理]"),
     BotCommand("days_ranks", "召唤播放次数日榜，失效时用 [管理]"),
     BotCommand("week_ranks", "召唤播放次数周榜，失效时用 [管理]"),
-    BotCommand("embyadmin", "开启emby控制台权限 [管理]"),
-    BotCommand("restart", "重启bot [owner]"),
+    BotCommand("embyadmin", "开启emby控制台权限 [管理]")
 ]
 
-owner_p = admin_p + [
+owner_only_p = [
+    BotCommand("restart", "重启bot [owner]"),
     BotCommand("proadmin", "添加bot管理 [owner]"),
     BotCommand("revadmin", "移除bot管理 [owner]"),
     BotCommand("renewall", "一键派送天数给所有未封禁的用户 [owner]"),
@@ -96,6 +99,11 @@ owner_p = admin_p + [
     BotCommand("backup_db", "手动备份数据库[owner]"),
     BotCommand("config", "开启bot高级控制面板 [owner]")
 ]
+
+private_admin_p = private_user_p + admin_only_p
+group_admin_p = group_user_p + admin_only_p
+private_owner_p = private_admin_p + owner_only_p
+group_owner_p = group_admin_p + owner_only_p
 
 from pyrogram import enums
 from pyromod import Client

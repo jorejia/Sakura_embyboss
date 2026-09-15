@@ -16,6 +16,16 @@ from bot.func_helper.fix_bottons import group_f, judge_start_ikb, judge_group_ik
 from bot import bot, prefixes, group, bot_photo, ranks, _open
 
 
+# 非隐身模式下，未入群用户除 /start 外不能使用任何私聊功能
+@bot.on_message(filters.private & ~filters.command('start', prefixes), group=-1)
+async def reject_unauthorized_private(_, msg):
+    if not _open.site or await user_in_group_filter(_, msg):
+        return
+
+    await sendMessage(msg, '当前未加入MICU社区群，无法使用机器人功能，请先点击 /start 加入社区~')
+    msg.stop_propagation()
+
+
 # 反命令提示
 @bot.on_message((filters.command('start', prefixes) | filters.command('count', prefixes) | filters.command('myinfo', prefixes)) & filters.chat(group))
 async def ui_g_command(_, msg):
@@ -44,17 +54,20 @@ async def count_info(_, msg):
 
 # 私聊开启面板
 @bot.on_message(filters.command('start', prefixes) & filters.private)
-async def p_start(_, msg):    
+async def p_start(_, msg):
+    # 首次私聊 /start 即建立 TG 占位记录；主键重复时 sql_add_emby 会忽略。
+    sql_add_emby(msg.from_user.id)
+
     if not await user_in_group_filter(_, msg):
         if not _open.site:
             return await asyncio.gather(deleteMessage(msg),
                                         sendMessage(msg,
-                                                    '🌻 **只在此山中，云深不知处**\n\n站点已开启隐身模式，暂不接收新人入群\n期待我们未来再次相遇~',
+                                                    '🌻 **只在此山中，云深不知处**\n\n站点已开启隐身模式，暂不接收新人入群\n期待我们在未来相遇~',
                                                     timer=30))
         else:   
             return await asyncio.gather(deleteMessage(msg),
                                         sendMessage(msg,
-                                                    '🌸 **桃花流水窅然去，别有天地非人间**\n\n恭喜你发现了MICU Cloud Media，欢迎加入我们的群组和频道\n加完之后别忘了回来点 /start 启用机器人哦~',
+                                                    '🌸 **桃花流水窅然去，别有天地非人间**\n\n恭喜你发现了MICU Cloud Media，欢迎加入我们的群组\n加入群组后可以点击菜单使用更多机器人功能哦~',
                                                     buttons=judge_group_ikb,
                                                     timer=60))
     try:
@@ -69,7 +82,6 @@ async def p_start(_, msg):
                                  sendPhoto(msg, bot_photo,
                                            f"**✨ 只有你想见我的时候我们的相遇才有意义**\n\n🍉__你好鸭 [{msg.from_user.first_name}](tg://user?id={msg.from_user.id}) 请选择功能__👇",
                                            buttons=judge_start_ikb(msg.from_user.id)))
-            sql_add_emby(msg.from_user.id)
 
 
 # 返回面板
@@ -83,7 +95,7 @@ async def b_start(_, call):
                                              call.from_user.id)))
     elif not await user_in_group_filter(_, call):
         await asyncio.gather(callAnswer(call, "⭐ 返回start"),
-                             editMessage(call, text='💢 必须加入我们的群组和频道，然后再 /start 滴~',
+                             editMessage(call, text='💢 必须加入我们的群组，然后再 /start 滴~',
                                          buttons=judge_group_ikb))
 
 
@@ -92,7 +104,7 @@ async def store_alls(_, call):
     if not await user_in_group_filter(_, call):
         await asyncio.gather(callAnswer(call, "⭐ 返回start"),
                              deleteMessage(call), sendPhoto(call, bot_photo,
-                                                            '💢 拜托啦！请先点击下面加入我们的群组和频道，然后再 /start 一下好吗？',
+                                                            '💢 拜托啦！请先点击下面加入我们的群组，然后再 /start 一下好吗？',
                                                             judge_group_ikb))
     elif await user_in_group_filter(_, call):
         await callAnswer(call, '⭕ 正在编辑', True)

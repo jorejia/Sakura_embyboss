@@ -1,7 +1,7 @@
 from pykeyboard import InlineKeyboard, InlineButton
 from pyrogram.types import InlineKeyboardMarkup
 from pyromod.helpers import ikb, array_chunk
-from bot import chanel, main_group, bot_name, _open, user_buy, sakura_b, schedall, line_options
+from bot import main_group, bot_name, _open, user_buy, sakura_b, schedall, line_options
 from bot.func_helper.emby import emby
 from bot.func_helper.line_access import configured_line, visible_lines
 from bot.func_helper.utils import judge_admins, members_info, convert_to_beijing_time
@@ -30,8 +30,7 @@ def judge_start_ikb(uid: int) -> InlineKeyboardMarkup:
 # un_group_answer
 group_f = ikb([[('点击我(●ˇ∀ˇ●)', f't.me/{bot_name}', 'url')]])
 # un in group
-judge_group_ikb = ikb([[('🌟 上新通知频道', f't.me/{chanel}', 'url'),
-                        ('💫 MICU Media 股东会', f't.me/{main_group}', 'url')]])
+judge_group_ikb = ikb([[('💫 加入 MICU Media 社区群', f't.me/{main_group}', 'url')]])
 
 """members ↓"""
 

@@ -42,9 +42,8 @@ async def sync_emby_group(_, msg):
         if i.tg not in members:
             if await emby.emby_del(i.embyid):
                 a += 1
-                reply_text = f'{b}. #id{i.tg} - [{i.name}](tg://user?id={i.tg}) 删除\n'
+                reply_text = f'{b}. #id{i.tg} - [{i.name}](tg://user?id={i.tg}) 账号删除，用户记录保留\n'
                 LOGGER.info(reply_text)
-                sql_delete_emby(tg=i.tg)
             else:
                 reply_text = f'{b}. #id{i.tg} - [{i.name}](tg://user?id={i.tg}) 删除错误\n'
                 LOGGER.error(reply_text)

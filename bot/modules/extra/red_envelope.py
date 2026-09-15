@@ -14,7 +14,7 @@ from pyrogram.types import ChatPermissions, InlineKeyboardButton, InlineKeyboard
 from bot import bot, prefixes, sakura_b, bot_photo, LOGGER
 from bot.func_helper.filters import user_in_group_on_filter
 from bot.func_helper.fix_bottons import users_iv_button
-from bot.func_helper.msg_utils import sendPhoto, sendMessage, callAnswer, editMessage
+from bot.func_helper.msg_utils import sendPhoto, sendMessage, callAnswer, editMessage, deleteMessage
 from bot.func_helper.utils import pwd_create, judge_admins, cache
 from bot.sql_helper import Session
 from bot.sql_helper.sql_emby import Emby, sql_get_emby, sql_update_emby
@@ -24,6 +24,55 @@ from bot.schemas import Yulv
 # 小项目，说实话不想写数据库里面。放内存里了，从字典里面每次拿分
 
 red_bags = {}
+pending_red_confirmations = {}
+
+MIN_RED_MEMBERS = 3
+RED_CONFIRM_TTL_SECONDS = 20
+
+
+async def _expire_red_confirmation(confirm_id):
+    await asyncio.sleep(RED_CONFIRM_TTL_SECONDS)
+    pending = pending_red_confirmations.pop(confirm_id, None)
+    if not pending:
+        return
+    await asyncio.gather(
+        deleteMessage(pending['message']),
+        deleteMessage(pending['prompt']),
+    )
+
+
+async def _request_minimum_members_confirmation(msg, money):
+    confirm_id = await pwd_create(8)
+    buttons = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(text='✅ 确认发送', callback_data=f'red_confirm-{confirm_id}'),
+            InlineKeyboardButton(text='❌ 取消发送', callback_data=f'red_cancel-{confirm_id}'),
+        ]
+    ])
+    prompt = await msg.reply(
+        f'⚠️ 红包最低发送 **{MIN_RED_MEMBERS}** 份，将自动按 '
+        f'**{MIN_RED_MEMBERS}** 份发送，共 {money}{sakura_b}。\n\n是否确认发送？',
+        reply_markup=buttons,
+    )
+    pending_red_confirmations[confirm_id] = {
+        'message': msg,
+        'prompt': prompt,
+        'chat_id': msg.chat.id,
+        'sender_id': msg.from_user.id if msg.from_user else None,
+        'money': money,
+        'members': MIN_RED_MEMBERS,
+        'expires_at': datetime.now() + timedelta(seconds=RED_CONFIRM_TTL_SECONDS),
+    }
+    asyncio.create_task(_expire_red_confirmation(confirm_id))
+
+
+def _red_confirmation_owner_matches(call, pending):
+    if call.message.chat.id != pending['chat_id']:
+        return False
+    sender_id = pending['sender_id']
+    if sender_id is not None:
+        return call.from_user.id == sender_id
+    return judge_admins(call.from_user.id)
 
 
 async def create_reds(money, members, first_name):
@@ -49,27 +98,7 @@ def draw_lucky_amount(remaining_money, remaining_members):
     return random.randint(1, min(reserved_max, double_mean_max))
 
 
-@bot.on_message(filters.command('red', prefixes) & user_in_group_on_filter & filters.group)
-async def send_red_envelop(_, msg):
-    try:
-        if len(msg.command) != 3:
-            raise ValueError
-        money = int(msg.command[1])
-        members = int(msg.command[2])
-        if members < 2 or money < members:
-            raise ValueError
-    except (IndexError, KeyError, TypeError, ValueError):
-        return await asyncio.gather(
-            msg.delete(),
-            sendMessage(
-                msg,
-                f'**🧧 发拼手气红包：**\n\n'
-                f'`/red` [总{sakura_b}数] [份数(至少2)]\n'
-                f'总{sakura_b}数不能小于份数',
-                timer=20,
-            ),
-        )
-
+async def _send_red_envelope(msg, money, members):
     if not msg.sender_chat:
         e = sql_get_emby(tg=msg.from_user.id)
         if not e or e.iv < money:
@@ -110,6 +139,81 @@ async def send_red_envelop(_, msg):
     cover = RanksDraw.hb_test_draw(money, members, user_pic, first_name)
     ikb, cover = await asyncio.gather(ikb, cover)
     await asyncio.gather(sendPhoto(msg, photo=cover, buttons=ikb), reply.delete())
+
+
+@bot.on_message(filters.command('red', prefixes) & user_in_group_on_filter & filters.group)
+async def send_red_envelop(_, msg):
+    try:
+        if len(msg.command) != 3:
+            raise ValueError
+        money = int(msg.command[1])
+        members = int(msg.command[2])
+        normalized_members = max(members, MIN_RED_MEMBERS)
+        if money <= 0 or members <= 0 or money < normalized_members:
+            raise ValueError
+    except (IndexError, KeyError, TypeError, ValueError):
+        return await asyncio.gather(
+            msg.delete(),
+            sendMessage(
+                msg,
+                f'**🧧 发拼手气红包：**\n\n'
+                f'`/red` [总{sakura_b}数] [份数(至少{MIN_RED_MEMBERS})]\n'
+                f'总{sakura_b}数不能小于份数',
+                timer=20,
+            ),
+        )
+
+    if members < MIN_RED_MEMBERS:
+        return await _request_minimum_members_confirmation(msg, money)
+
+    await _send_red_envelope(msg, money, members)
+
+
+@bot.on_callback_query(filters.regex(r'^red_confirm-') & user_in_group_on_filter)
+async def confirm_minimum_red_members(_, call):
+    confirm_id = call.data.split('-', 1)[1]
+    pending = pending_red_confirmations.get(confirm_id)
+    if not pending:
+        return await callAnswer(call, '确认已过期，请重新发送 /red 命令。', True)
+    if pending['expires_at'] <= datetime.now():
+        pending_red_confirmations.pop(confirm_id, None)
+        await callAnswer(call, '确认已过期，请重新发送 /red 命令。', True)
+        return await asyncio.gather(
+            deleteMessage(pending['message']),
+            deleteMessage(pending['prompt']),
+        )
+    if not _red_confirmation_owner_matches(call, pending):
+        return await callAnswer(call, '这不是你的红包，无法代替确认。', True)
+
+    pending_red_confirmations.pop(confirm_id, None)
+    await callAnswer(call, f'已确认按 {pending["members"]} 份发送。')
+    await editMessage(call, '✅ 已确认，正在准备红包……')
+    await _send_red_envelope(pending['message'], pending['money'], pending['members'])
+    await deleteMessage(pending['prompt'])
+
+
+@bot.on_callback_query(filters.regex(r'^red_cancel-') & user_in_group_on_filter)
+async def cancel_minimum_red_members(_, call):
+    confirm_id = call.data.split('-', 1)[1]
+    pending = pending_red_confirmations.get(confirm_id)
+    if not pending:
+        return await callAnswer(call, '确认已过期，请重新发送 /red 命令。', True)
+    if pending['expires_at'] <= datetime.now():
+        pending_red_confirmations.pop(confirm_id, None)
+        await callAnswer(call, '确认已过期，请重新发送 /red 命令。', True)
+        return await asyncio.gather(
+            deleteMessage(pending['message']),
+            deleteMessage(pending['prompt']),
+        )
+    if not _red_confirmation_owner_matches(call, pending):
+        return await callAnswer(call, '这不是你的红包，无法代替取消。', True)
+
+    pending_red_confirmations.pop(confirm_id, None)
+    await callAnswer(call, '已取消发送红包。')
+    await asyncio.gather(
+        deleteMessage(pending['message']),
+        editMessage(call, '❌ 已取消发送红包。'),
+    )
 
 
 @bot.on_callback_query(filters.regex("red_bag") & user_in_group_on_filter)
