@@ -67,9 +67,9 @@ async def p_start(_, msg):
         else:   
             return await asyncio.gather(deleteMessage(msg),
                                         sendMessage(msg,
-                                                    '🌸 **桃花流水窅然去，别有天地非人间**\n\n恭喜你发现了MICU Cloud Media，欢迎加入我们的群组\n加入群组后可以点击菜单使用更多机器人功能哦~',
+                                                    '🌸 **桃花流水窅然去，别有天地非人间**\n\n恭喜你发现了MICU Cloud Media，欢迎加入我们的群组\n加群后可以点击 /start 使用更多机器人功能哦~',
                                                     buttons=judge_group_ikb,
-                                                    timer=60))
+                                                    timer=180))
     try:
         u = msg.command[1].split('-')[0]
         if u in f'{ranks.logo}' or u == str(msg.from_user.id):
