@@ -17,9 +17,9 @@ from bot.sql_helper import Session
 
 def _line_code_account_error(user):
     if user is None or not user.embyid:
-        return "当前无账号请先使用注册码注册账号"
+        return "直连Pro码无法在无账号的情况下使用，请先获取注册码，使用注册码注册账号，再使用直连Pro码升级权益"
     if user.lv == 'c':
-        return "您的账号已到期，请先使用续费码续费账号"
+        return "您的账号已到期，请先使用续费码续费账号之后，再使用直连Pro码升级权益"
     return None
 
 
