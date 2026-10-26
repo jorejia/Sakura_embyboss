@@ -571,7 +571,8 @@ def build_line_menu_text(current_value: int, line_pro_ex=None) -> str:
         f'**直连Pro**：{line_pro_status_text(line_pro_ex)}\n\n'
         f'说明：\n'
         f'- 切换不会中断当前播放的视频\n'
-        f'- 切换后会立即作用于下一次播放的视频\n'
+        f'- 切换后会立即作用于下一次播放的视频，同时生效于所有设备所有客户端\n'
+        f'- 所有线路包括Pro线路共用一个直连服地址，切换线路无需更改服务器地址\n'
         f'- 不同地区、运营商和时间段的线路体验会有差异，建议随时切换使用更适合的线路'
     )
 
