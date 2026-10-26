@@ -566,13 +566,13 @@ def build_line_menu_text(current_value: int, line_pro_ex=None) -> str:
     return (
         f'**🛣️ 直连服线路选择**\n\n'
         f'本功能只作为直连服视频流线路的实时切换，使用海外服时无效，'
-        f'服务器地址请见用户手册，[点击发电](https://shop.micu.me)获取直连Pro权益\n\n'
+        f'直连服唯一地址请见用户手册，所有线路包括Pro线路切换无需更改服务器地址，[点击发电](https://shop.micu.me)获取直连Pro权益\n\n'
         f'**当前线路**：{line_label(current_value)}\n\n'
         f'**直连Pro**：{line_pro_status_text(line_pro_ex)}\n\n'
         f'说明：\n'
         f'- 切换不会中断当前播放的视频\n'
-        f'- 切换后会立即作用于下一次播放的视频，同时生效于所有设备所有客户端\n'
-        f'- 所有线路包括Pro线路共用一个直连服地址，切换线路无需更改服务器地址\n'
+        f'- 切换后会立即作用于下一次播放的视频\n'
+        f'- 切换同时生效于所有设备所有客户端\n'
         f'- 不同地区、运营商和时间段的线路体验会有差异，建议随时切换使用更适合的线路'
     )
 
