@@ -30,15 +30,15 @@ class PyrogramContextFilter(logging.Filter):
         message = record.getMessage()
         if "Unable to connect due to network issues" in message:
             record.msg = (
-                "【Telegram连接阶段】Pyrogram 在 bot.start() 建立 Telegram MTProto 会话时连接失败；"
+                "【Telegram连接】Pyrogram 建立或恢复 Telegram MTProto 会话失败；"
                 "连接对象是 Telegram 数据中心，不是 Emby/Sidecar/WebHook。原始错误："
                 + message
             )
             record.args = ()
         elif "Connection failed! Trying again" in message:
             record.msg = (
-                "【Telegram连接阶段】Pyrogram 连接 Telegram MTProto 数据中心失败，正在按库内重试策略重连。"
-                "这仍然发生在 bot.start() 启动阶段。原始提示："
+                "【Telegram连接】Pyrogram 连接 Telegram MTProto 数据中心失败，正在按库内重试策略重连。"
+                "原始提示："
                 + message
             )
             record.args = ()
@@ -46,7 +46,7 @@ class PyrogramContextFilter(logging.Filter):
 
 
 pyrogram_handler = logging.StreamHandler()
-pyrogram_handler.setLevel(logging.WARNING)
+pyrogram_handler.setLevel(logging.INFO)
 pyrogram_handler.addFilter(PyrogramContextFilter())
 pyrogram_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 
@@ -55,6 +55,10 @@ pyrogram_logger.setLevel(logging.WARNING)
 pyrogram_logger.propagate = False
 if not pyrogram_logger.handlers:
     pyrogram_logger.addHandler(pyrogram_handler)
+
+# Record connection/session transitions without enabling packet-level debug logs.
+for name in ("pyrogram.connection.connection", "pyrogram.session.session"):
+    logging.getLogger(name).setLevel(logging.INFO)
 
 
 def logu(name):

@@ -114,4 +114,8 @@ bot = Client(bot_name, api_id=owner_api, api_hash=owner_hash, bot_token=bot_toke
              workers=300,
              max_concurrent_transmissions=1000, parse_mode=enums.ParseMode.MARKDOWN)
 
+from .func_helper.telegram_reconnect import install_telegram_reconnect
+
+telegram_reconnect = install_telegram_reconnect(bot, LOGGER)
+
 LOGGER.info("Clinet 客户端准备")
