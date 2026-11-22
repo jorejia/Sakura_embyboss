@@ -89,43 +89,33 @@ async def sched_change_policy(_, call):
         await sched_panel(_, call.message)
 
 
-@bot.on_message(filters.command('check_ex', prefixes) & admins_on_filter)
-async def check_ex_admin(_, msg):
-    send = await msg.reply("🍥 正在运行 【到期检测】。。。")
+# ───────── 维护任务（由管理菜单「🧰 维护」调用，不再提供命令） ─────────
+
+async def run_check_ex() -> str:
     result = await check_expired()
     if result == 'paused':
-        return await asyncio.gather(
-            msg.delete(),
-            send.edit("⏸️ 【到期检测已暂停】本次未执行"),
-        )
-    await asyncio.gather(msg.delete(), send.edit("✅ 【到期检测结束】"))
+        return "⏸️ 【到期检测已暂停】本次未执行"
+    return "✅ 【到期检测结束】"
 
 
-# bot数据库手动备份
-@bot.on_message(filters.command('backup_db', prefixes) & filters.user(owner))
-async def manual_backup_db(_, msg):
-    await asyncio.gather(deleteMessage(msg), auto_backup_db())
+async def run_backup_db():
+    await auto_backup_db()
 
 
-@bot.on_message(filters.command('days_ranks', prefixes) & admins_on_filter)
-async def day_r_ranks(_, msg):
-    await asyncio.gather(msg.delete(), day_ranks(pin_mode=False))
+async def run_day_ranks():
+    await day_ranks(pin_mode=False)
 
 
-@bot.on_message(filters.command('week_ranks', prefixes) & admins_on_filter)
-async def week_r_ranks(_, msg):
-    await asyncio.gather(msg.delete(), week_ranks(pin_mode=False))
+async def run_week_ranks():
+    await week_ranks(pin_mode=False)
 
 
-@bot.on_message(filters.command('restart', prefixes) & admins_on_filter)
-async def restart_bot(_, msg):
-    await deleteMessage(msg)
-    send = await msg.reply("Restarting，等待几秒钟。")
-    schedall.restart_chat_id = send.chat.id
-    schedall.restart_msg_id = send.id
+def restart_bot(chat_id: int, msg_id: int):
+    """记录重启提示消息后重启 embyboss 服务（不会返回）"""
+    schedall.restart_chat_id = chat_id
+    schedall.restart_msg_id = msg_id
     save_config()
     try:
-        # some code here
         LOGGER.info("重启")
         os.execl('/bin/systemctl', 'systemctl', 'restart', 'embyboss')  # 用当前进程执行systemctl命令，重启embyboss服务
     except FileNotFoundError:

@@ -77,7 +77,7 @@ async def check_and_notify_series_update(item_data: dict):
 
 @router.post("/webhook/medias")
 async def handle_media_webhook(request: Request):
-    """处理 Emby 媒体库更新事件，仅向收藏剧集的用户推送更新通知。"""
+    """处理 emby-sidecar 推送的新剧集入库事件（library.new），仅向收藏剧集的用户推送更新通知。"""
     try:
         webhook_data = await parse_webhook_payload(request)
         if not webhook_data:

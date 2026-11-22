@@ -4,7 +4,8 @@
 """
 from pyrogram import filters
 
-from bot import bot, _open, save_config, LOGGER, bot_name, default_line_id
+from bot import bot, _open, save_config, LOGGER, bot_name
+from bot.func_helper.sidecar_lines import current_default_line, current_lines
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import admins_on_filter
 from bot.func_helper.line_access import revoke_line_pro_access
@@ -469,7 +470,7 @@ async def ban_used_code(_, call):
 
         revoked, failed_stage, detail = await revoke_line_pro_access(
             result['embyid'],
-            default_line_id,
+            current_default_line(),
             emby.set_use_line,
             clear_line_pro_and_code,
         )
@@ -480,7 +481,7 @@ async def ban_used_code(_, call):
             )
             LOGGER.info(
                 f'【封禁线路码】管理员 {call.from_user.id} 封禁并删除 {code}，'
-                f'用户 {tg} 的直连 Pro 时长不足，已清除 Pro 资格并切回默认线路 {default_line_id}'
+                f'用户 {tg} 的直连 Pro 时长不足，已清除 Pro 资格并切回默认线路 {current_default_line()}'
             )
             notify_text = '' if notified else '\n\n⚠️ 处罚已生效，但机器人私聊通知发送失败。'
             return await editMessage(

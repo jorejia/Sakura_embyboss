@@ -143,10 +143,18 @@ class Config(BaseModel):
     open: Open
     admins: Optional[List[int]] = []
     money: str
-    emby_api: str
-    emby_url: str
+    # 公网访问地址（如 https://tv.micu.hk）：bot 只用它取图片（排行榜封面、内联搜索海报）
+    emby_public_url: Optional[str] = ""
+    # 以下两项已不再使用（账号与数据都在 sidecar），保留只为兼容旧配置文件
+    emby_api: Optional[str] = ""
+    emby_url: Optional[str] = ""
+    # sidecar 管理端口地址（ADMIN_LISTEN_ADDR，如 http://127.0.0.1:18097），不要填对外反代地址
     sidecar_url: str
-    emby_block: Optional[List[str]] = []
+    # sidecar 的 ADMIN_API_TOKEN（未配置可留空）
+    sidecar_admin_token: Optional[str] = ""
+    # sidecar 推送收藏 / 追剧通知时携带的 X-Sidecar-Token（对应 sidecar 的 NOTIFY_WEBHOOK_TOKEN，留空不校验）
+    sidecar_webhook_token: Optional[str] = ""
+    emby_block: Optional[List[str]] = []  # 已废弃：隐藏媒体库改由新前端自定义首页实现
     db_host: str
     db_user: str
     db_pwd: str

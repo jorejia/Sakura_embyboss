@@ -5,7 +5,8 @@ import requests
 import time
 from datetime import timedelta, datetime
 
-from bot import bot, _open, LOGGER, bot_photo, user_buy, line_options
+from bot import bot, _open, LOGGER, bot_photo, user_buy
+from bot.func_helper.sidecar_lines import current_default_line, current_lines
 from bot.func_helper.emby import emby
 from bot.func_helper.line_access import line_pro_active, line_pro_status_text, pro_activation_line
 from bot.func_helper.fix_bottons import register_code_ikb
@@ -46,7 +47,7 @@ async def _redeem_line_code(msg, register_code, data):
 
         days = code.us
         was_pro_active = line_pro_active(user.line_pro_ex, now=now)
-        activation_line = pro_activation_line(line_options, user.line_pro_ex, now=now)
+        activation_line = pro_activation_line(current_lines(), user.line_pro_ex, now=now)
         emby_id = user.embyid
         base_ex = user.line_pro_ex if user.line_pro_ex and user.line_pro_ex > now else now
         line_pro_ex = base_ex + timedelta(days=days)

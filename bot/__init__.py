@@ -32,10 +32,10 @@ ranks = config.ranks
 prefixes = ['/', '!', '.', '，', '。']
 schedall = config.schedall
 # emby设置
-emby_api = config.emby_api
-emby_url = config.emby_url
+emby_public_url = (config.emby_public_url or "").rstrip("/")
 sidecar_url = config.sidecar_url
-emby_block = config.emby_block
+sidecar_admin_token = config.sidecar_admin_token or ""
+sidecar_webhook_token = config.sidecar_webhook_token or ""
 default_line_id = config.default_line_id
 expiry_weights = config.expiry_weights
 line_options = config.line_options
@@ -72,7 +72,6 @@ admin_only_p = [
     BotCommand("dd", "查询豆瓣ID [管理]"),
     BotCommand("score", "加/减未用天数 [管理]"),
     BotCommand("coins", f"加/减{sakura_b} [管理]"),
-    BotCommand("deleted", f"清理死号 [管理]"),
     BotCommand("renew", "调整到期时间 [管理]"),
     BotCommand("rmemby", "删除用户 [管理]"),
     BotCommand("prouser", "增加白名单 [管理]"),
@@ -80,24 +79,16 @@ admin_only_p = [
     BotCommand("rev_white_chanel", "移除皮套人白名单 [管理]"),
     BotCommand("white_chanel", "添加皮套人白名单 [管理]"),
     BotCommand("unban_chanel", "解封皮套人 [管理]"),
-    BotCommand("syncgroupm", "消灭不在群的人 [管理]"),
-    BotCommand("syncunbound", "消灭未绑定bot的emby账户 [管理]"),
-    BotCommand("check_ex", "手动到期检测 [管理]"),
-    BotCommand("days_ranks", "召唤播放次数日榜，失效时用 [管理]"),
-    BotCommand("week_ranks", "召唤播放次数周榜，失效时用 [管理]"),
-    BotCommand("embyadmin", "开启emby控制台权限 [管理]")
 ]
+# 已移到管理菜单「🧰 维护」：群成员同步、账号一致性检查、到期检测、日榜 / 周榜、备份数据库、重启
+# 已移除：deleted（清理死号）、embyadmin、bindall_id、config（菜单「其他 🪟」可进入）
 
 owner_only_p = [
-    BotCommand("restart", "重启bot [owner]"),
     BotCommand("proadmin", "添加bot管理 [owner]"),
     BotCommand("revadmin", "移除bot管理 [owner]"),
     BotCommand("renewall", "一键派送天数给所有未封禁的用户 [owner]"),
     BotCommand("coinsall", "一键派送币币给所有未封禁的用户 [owner]"),
     BotCommand("callall", "群发消息给每个人 [owner]"),
-    BotCommand("bindall_id", "一键更新用户们Embyid [owner]"),
-    BotCommand("backup_db", "手动备份数据库[owner]"),
-    BotCommand("config", "开启bot高级控制面板 [owner]")
 ]
 
 private_admin_p = private_user_p + admin_only_p

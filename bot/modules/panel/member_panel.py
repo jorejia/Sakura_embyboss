@@ -15,15 +15,16 @@ from pyrogram.errors import BadRequest
 from sqlalchemy import and_
 from bot.schemas import ExDate, Yulv
 from bot import bot, LOGGER, _open, sakura_b, ranks, group, config, user_buy, \
-    bot_name, default_line_id, line_options
+    bot_name
 from pyrogram import filters
+from bot.func_helper.sidecar_lines import current_default_line, current_lines
 from bot.func_helper.emby import emby
 from bot.func_helper.line_access import configured_line, line_pro_active, line_pro_status_text, line_requires_pro, \
     line_pro_trial_available, pro_activation_line
 from bot.func_helper.filters import user_in_group_on_filter
 from bot.func_helper.utils import members_info, tem_alluser, cr_link_one, cr_link_invite
 from bot.func_helper.fix_bottons import members_ikb, back_members_ikb, re_create_ikb, del_me_ikb, re_delme_ikb, \
-    re_reset_ikb, re_changetg_ikb, emby_block_ikb, user_emby_block_ikb, user_emby_unblock_ikb, re_exchange_b_ikb, \
+    re_reset_ikb, re_changetg_ikb, re_exchange_b_ikb, \
     dianbo_ikb, re_douban_ikb, store_ikb, store_vip_ikb, store_c_ikb, re_store_renew, re_bindtg_ikb, close_it_ikb, \
     user_query_page, notify_menu_ikb, parental_menu_ikb, parental_rating_label, line_menu_ikb, line_label
 from bot.func_helper.msg_utils import callAnswer, editMessage, callListen, sendMessage, ask_return, deleteMessage, \
@@ -422,90 +423,6 @@ async def reset(_, call):
                         LOGGER.error(f"【重置密码】：{call.from_user.id} 重置密码失败 ！")
 
 
-# 显示/隐藏某些库
-@bot.on_callback_query(filters.regex('embyblock') & user_in_group_on_filter)
-async def embyblocks(_, call):
-    data = sql_get_emby(tg=call.from_user.id)
-    if not data:
-        return await callAnswer(call, '⚠️ 数据库没有你，请重新 /start录入', True)
-    if data.embyid is None:
-        return await callAnswer(call, '❓ 未查询到账户，不许乱点!', True)
-    elif data.lv == "c":
-        return await callAnswer(call, '💢 账户到期，封禁中无法使用！', True)
-    elif len(config.emby_block) == 0:
-        send = await editMessage(call, '⭕ 管理员未设置。。。 快催催\no(*////▽////*)q', buttons=back_members_ikb)
-        if send is False:
-            return
-    else:
-        success, rep = emby.user(embyid=data.embyid)
-        try:
-            if success is False:
-                stat = '💨 未知'
-            else:
-                blocks = rep["Policy"]["BlockedMediaFolders"]
-                if set(config.emby_block).issubset(set(blocks)):
-                    stat = '🔴 隐藏'
-                else:
-                    stat = '🟢 显示'
-        except KeyError:
-            stat = '💨 未知'
-        block = ", ".join(config.emby_block)
-        await asyncio.gather(callAnswer(call, "✅ 到位"),
-                             editMessage(call,
-                                         f'🤺 用户状态：{stat}\n🎬 目前设定的库为: \n\n**{block}**\n\n请选择你的操作。',
-                                         buttons=emby_block_ikb(data.embyid)))
-
-
-# 隐藏
-@bot.on_callback_query(filters.regex('emby_block') & user_in_group_on_filter)
-async def user_emby_block(_, call):
-    embyid = call.data.split('-')[1]
-    send = await callAnswer(call, f'🎬 正在为您关闭显示ing')
-    if send is False:
-        return
-    success, rep = emby.user(embyid=embyid)
-    currentblock = []
-    if success:
-        try:
-            currentblock = list(set(rep["Policy"]["BlockedMediaFolders"] + config.emby_block + ['播放列表']))
-        except KeyError:
-            currentblock = ['播放列表'] + config.emby_block
-        re = await emby.emby_block(embyid, 0, block=currentblock)
-        if re is True:
-            send1 = await editMessage(call, f'🕶️ ο(=•ω＜=)ρ⌒☆\n 小尾巴隐藏好了！ ', buttons=user_emby_block_ikb)
-            if send1 is False:
-                return
-        else:
-            await editMessage(call, f'🕶️ Error!\n 隐藏失败，请上报管理检查)', buttons=back_members_ikb)
-
-
-# 显示
-@bot.on_callback_query(filters.regex('emby_unblock') & user_in_group_on_filter)
-async def user_emby_unblock(_, call):
-    embyid = call.data.split('-')[1]
-    send = await callAnswer(call, f'🎬 正在为您开启显示ing')
-    if send is False:
-        return
-    success, rep = emby.user(embyid=embyid)
-    currentblock = []
-    if success:
-        try:
-            currentblock = list(set(rep["Policy"]["BlockedMediaFolders"] + ['播放列表']))
-            # 保留不同的元素
-            currentblock = [x for x in currentblock if x not in config.emby_block] + [x for x in config.emby_block if
-                                                                                      x not in currentblock]
-        except KeyError:
-            currentblock = ['播放列表']
-        re = await emby.emby_block(embyid, 0, block=currentblock)
-        if re is True:
-            # await embyblock(_, call)
-            send1 = await editMessage(call, f'🕶️ ┭┮﹏┭┮\n 小尾巴被抓住辽！ ', buttons=user_emby_unblock_ikb)
-            if send1 is False:
-                return
-        else:
-            await editMessage(call, f'🎬 Error!\n 显示失败，请上报管理检查设置', buttons=back_members_ikb)
-
-
 @bot.on_callback_query(filters.regex('exchange') & user_in_group_on_filter)
 async def call_exchange(_, call):
     await asyncio.gather(callAnswer(call, '🔋 使用注册码'), deleteMessage(call))
@@ -665,7 +582,7 @@ async def line_menu(_, call):
     expiry_notice = None
 
     if expired_at is not None:
-        ok, value = await emby.set_use_line(e.embyid, default_line_id)
+        ok, value = await emby.set_use_line(e.embyid, current_default_line())
         if not ok:
             return await callAnswer(call, f'❌ 直连Pro已到期，但切回默认线路失败：{value}', True)
 
@@ -683,7 +600,7 @@ async def line_menu(_, call):
         e.line_pro_ex = None
         LOGGER.info(
             f'【直连Pro页面到期处理】用户 {call.from_user.id} 的权益已于 {expired_at} 到期，'
-            f'已切回默认线路 {default_line_id} 并清除权限'
+            f'已切回默认线路 {current_default_line()} 并清除权限'
         )
     else:
         ok, value = await emby.get_use_line(e.embyid)
@@ -691,8 +608,8 @@ async def line_menu(_, call):
             return await callAnswer(call, f'❌ 获取当前线路失败：{value}', True)
 
         # 兼容权限字段已被其他入口清除、但 Sidecar 仍停留在 Pro 线路的情况。
-        if not line_pro_active(e.line_pro_ex, now=now) and line_requires_pro(line_options, value):
-            ok, value = await emby.set_use_line(e.embyid, default_line_id)
+        if not line_pro_active(e.line_pro_ex, now=now) and line_requires_pro(current_lines(), value):
+            ok, value = await emby.set_use_line(e.embyid, current_default_line())
             if not ok:
                 return await callAnswer(call, f'❌ 直连Pro未激活，但切回默认线路失败：{value}', True)
 
@@ -718,7 +635,7 @@ async def line_pro_trial(_, call):
         return await callAnswer(call, '❌ 每个用户只有一次试用机会，你已经使用过了', True)
 
     now = datetime.now()
-    activation_line = pro_activation_line(line_options, e.line_pro_ex, now=now)
+    activation_line = pro_activation_line(current_lines(), e.line_pro_ex, now=now)
     ok, value = await emby.get_use_line(e.embyid)
     if not ok:
         return await callAnswer(call, f'❌ 获取当前线路失败：{value}', True)
@@ -767,7 +684,7 @@ async def line_set(_, call):
     except (IndexError, ValueError):
         return await callAnswer(call, '❌ 线路参数错误', True)
 
-    option = configured_line(line_options, value)
+    option = configured_line(current_lines(), value)
     if option is None:
         return await callAnswer(call, '❌ 该线路未在 Bot 中配置', True)
     has_pro = line_pro_active(e.line_pro_ex)

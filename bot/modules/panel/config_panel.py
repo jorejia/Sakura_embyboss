@@ -12,11 +12,7 @@ from bot.func_helper.fix_bottons import config_preparation, close_it_ikb, back_c
 from bot.func_helper.msg_utils import deleteMessage, editMessage, callAnswer, callListen, sendPhoto, sendFile
 
 
-@bot.on_message(filters.command('config', prefixes=prefixes) & admins_on_filter)
-async def config_p_set(_, msg):
-    await deleteMessage(msg)
-    await sendPhoto(msg, photo=bot_photo, caption="🌸 欢迎回来！\n\n👇点击你要修改的内容。",
-                    buttons=config_preparation())
+# /config 命令已移除：管理菜单「其他 🪟」即可进入本面板
 
 
 @bot.on_callback_query(filters.regex('back_config') & admins_on_filter)
@@ -35,36 +31,6 @@ async def log_out(_, call):
         return LOGGER.info(f"【admin】：{call.from_user.id} - 导出日志失败！")
 
     LOGGER.info(f"【admin】：{call.from_user.id} - 导出日志成功！")
-
-
-# 设置需要显示/隐藏的库
-@bot.on_callback_query(filters.regex('set_block') & admins_on_filter)
-async def set_block(_, call):
-    await callAnswer(call, '📺 设置显隐媒体库')
-    send = await editMessage(call,
-                             "🎬**【设置需要显示/隐藏的库】**\n\n对我发送库的名字，多个**中文逗号**隔开\n例: `SGNB 特效电影，纪录片`\n超时自动退出 or 点 /cancel 退出")
-    if send is False:
-        return
-
-    txt = await callListen(call, 120)
-    if txt is False:
-        return await config_p_re(_, call)
-
-    elif txt.text == '/cancel':
-        # config.emby_block = []
-        # save_config()
-        await txt.delete()
-        return await config_p_re(_, call)
-        # await editMessage(call, '__已清空并退出，__ **会话已结束！**', buttons=back_set_ikb('set_block'))
-        # LOGGER.info(f"【admin】：{call.from_user.id} - 清空 指定显示/隐藏内容库 设置完成")
-    else:
-        c = txt.text.split("，")
-        config.emby_block = c
-        save_config()
-        await txt.delete()
-        await editMessage(call, f"🎬 指定显示/隐藏内容如下: \n\n{'.'.join(config.emby_block)}\n设置完成！done！",
-                          buttons=back_config_p_ikb)
-        LOGGER.info(f"【admin】：{call.from_user.id} - 更新指定显示/隐藏内容库为 {config.emby_block} 设置完成")
 
 
 @bot.on_callback_query(filters.regex("set_buy") & admins_on_filter)

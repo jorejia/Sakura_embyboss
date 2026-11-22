@@ -21,8 +21,8 @@ class StartRegistrationAndSyncRetentionTests(unittest.TestCase):
         self.assertNotIn('回来点 /start', handler)
 
     def test_syncgroupm_keeps_the_local_user_row(self):
-        handler = self.syncs.split('async def sync_emby_group(_, msg):', 1)[1].split(
-            '@bot.on_message', 1
+        handler = self.syncs.split('async def sync_group_members(report):', 1)[1].split(
+            'async def find_unbound_accounts', 1
         )[0]
         self.assertIn('await emby.emby_del(i.embyid)', handler)
         self.assertNotIn('sql_delete_emby(', handler)

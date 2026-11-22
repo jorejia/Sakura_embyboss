@@ -6,7 +6,8 @@ from datetime import timedelta, datetime
 from pyrogram.errors import FloodWait
 from sqlalchemy import and_
 from asyncio import sleep
-from bot import bot, default_line_id, expiry_weights, group, LOGGER, _open, schedall
+from bot import bot, expiry_weights, group, LOGGER, _open, schedall
+from bot.func_helper.sidecar_lines import current_default_line, current_lines
 from bot.func_helper.emby import emby
 from bot.func_helper.line_access import revoke_line_pro_access
 from bot.sql_helper.sql_emby import (
@@ -27,7 +28,7 @@ async def check_line_pro_expired():
     for user in expired_users:
         revoked, failed_stage, result = await revoke_line_pro_access(
             user.embyid,
-            default_line_id,
+            current_default_line(),
             emby.set_use_line,
             lambda: sql_update_emby(
                 and_(Emby.tg == user.tg, Emby.line_pro_ex <= now),
@@ -46,11 +47,11 @@ async def check_line_pro_expired():
 
         if revoked:
             text = (f'【直连Pro到期检测】\n#id{user.tg} [{user.name}](tg://user?id={user.tg}) '
-                    f'直连Pro已到期，权限已取消并切回默认线路 {default_line_id}')
+                    f'直连Pro已到期，权限已取消并切回默认线路 {current_default_line()}')
             LOGGER.info(text)
         else:
             text = (f'【直连Pro到期检测】\n#id{user.tg} [{user.name}](tg://user?id={user.tg}) '
-                    f'已切回默认线路 {default_line_id}，但数据库撤权失败，下次任务将重试')
+                    f'已切回默认线路 {current_default_line()}，但数据库撤权失败，下次任务将重试')
             LOGGER.error(text)
         try:
             await bot.send_message(user.tg, text)

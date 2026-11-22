@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
-from bot import sidecar_url, emby_url, emby_api, _open, save_config, emby_block, LOGGER
+from bot import sidecar_url, sidecar_admin_token, emby_public_url, _open, save_config, LOGGER
 from bot.sql_helper.sql_emby import sql_get_emby, sql_update_emby, Emby
 from bot.sql_helper.sql_favorites import sql_delete_favorites_by_embyid
 from bot.func_helper.utils import pwd_create, convert_runtime, cache
@@ -30,8 +30,8 @@ def _service_name(url):
     url_text = str(url)
     if sidecar_url and url_text.startswith(sidecar_url.rstrip("/")):
         return "Sidecar"
-    if emby_url and url_text.startswith(emby_url.rstrip("/")):
-        return "Emby"
+    if emby_public_url and url_text.startswith(emby_public_url.rstrip("/")):
+        return "Emby图片"
     return "HTTP"
 
 
@@ -82,108 +82,38 @@ class LoggedRequests:
 r = LoggedRequests
 
 
-def create_policy(admin=False, disable=False, limit: int = 2, block: list = None):
-    """
-    :param admin: bool 是否开启管理员
-    :param disable: bool 是否禁用
-    :param limit: int 同时播放流的默认值，修改2 -> 3 any都可以
-    :param block: list 仅在媒体库屏蔽场景附加 BlockedMediaFolders
-    :return: plocy 用户策略
-    """
-    policy = {
-        "IsAdministrator": admin,
-        "IsHidden": True,
-        "IsHiddenRemotely": True,
-        "IsHiddenFromUnusedDevices": True,
-        "IsDisabled": disable,
-        "LockedOutDate": 0,
-        "AllowTagOrRating": False,
-        "BlockedTags": [],
-        "IsTagBlockingModeInclusive": False,
-        "IncludeTags": [],
-        "EnableUserPreferenceAccess": False,
-        "AccessSchedules": [],
-        "BlockUnratedItems": [],
-        "EnableRemoteControlOfOtherUsers": False,
-        "EnableSharedDeviceControl": False,
-        "EnableRemoteAccess": True,
-        "EnableLiveTvManagement": False,
-        "EnableLiveTvAccess": False,
-        "EnableMediaPlayback": True,
-        "EnableAudioPlaybackTranscoding": False,
-        "EnableVideoPlaybackTranscoding": False,
-        "EnablePlaybackRemuxing": False,
-        "EnableContentDeletion": False,
-        "RestrictedFeatures": ["notifications"],
-        "EnableContentDeletionFromFolders": [],
-        "EnableContentDownloading": False,
-        "EnableSubtitleDownloading": False,
-        "EnableSubtitleManagement": False,
-        "EnableSyncTranscoding": False,
-        "EnableMediaConversion": False,
-        "EnabledChannels": [],
-        "EnableAllChannels": True,
-        "EnabledFolders": [],
-        "EnableAllFolders": True,
-        "InvalidLoginAttemptCount": 0,
-        "EnablePublicSharing": False,
-        "RemoteClientBitrateLimit": 0,
-        "AuthenticationProviderId": "Emby.Server.Implementations.Library.DefaultAuthenticationProvider",
-        "ExcludedSubFolders": [],
-        "SimultaneousStreamLimit": str(limit),
-        "EnabledDevices": [],
-        "EnableAllDevices": True,
-        "AllowCameraUpload": False,
-        "AllowSharingPersonalItems": False
-    }
-    if block is not None:
-        policy["BlockedMediaFolders"] = block
-    return policy
-
-
-def pwd_policy(embyid, stats=False, new=None):
-    """
-    :param embyid: str 修改的emby_id
-    :param stats: bool 是否重置密码
-    :param new: str 新密码
-    :return: plocy 密码策略
-    """
-    if new is None:
-        policy = {
-            "Id": f"{embyid}",
-            "ResetPassword": stats,
-        }
-    else:
-        policy = {
-            "Id": f"{embyid}",
-            "NewPw": f"{new}",
-        }
-    return policy
-
-
 class Embyservice:
     """
-    初始化一个类，接收url和api_key，params作为参数
-    计划是将所有关于emby api的使用方法放进来
+    账号、线路、条目查询都走 emby-sidecar 管理端口；
+    只有图片（排行榜封面、内联搜索海报）从公网 Emby 地址获取（由 nginx 转给 Emby 原后端并缓存，无需 API Key）。
     """
 
-    def __init__(self, url, api_key):
+    def __init__(self, public_url):
         """
-        必要参数
-        :param url: 网址
-        :param api_key: embyapi
+        :param public_url: 公网访问地址，如 https://tv.micu.hk（用于图片）
         """
-        self.url = url
-        self.api_key = api_key
+        self.url = (public_url or "").rstrip("/")
         self.headers = {
-            'accept': 'application/json',
-            'content-type': 'application/json',
-            'X-Emby-Token': self.api_key,
-            'X-Emby-Client': 'Sakura BOT',
-            'X-Emby-Device-Name': 'Sakura BOT',
-            'X-Emby-Client-Version': '1.0.0',
+            'accept': 'image/*,application/json',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.82'
         }
+
+    # ───────── sidecar 管理端口 ─────────
+    # 账号的创建 / 删除 / 改密 / 禁用、线路、条目查询都在 sidecar 完成，Emby 原后端只负责刮削与图片。
+
+    @staticmethod
+    def _sidecar_base():
+        return (sidecar_url or "").rstrip("/")
+
+    @staticmethod
+    def _sidecar_headers():
+        headers = {"accept": "application/json", "content-type": "application/json"}
+        if sidecar_admin_token:
+            headers["X-Admin-Token"] = sidecar_admin_token
+        return headers
+
+    def _sidecar(self, method, path, timeout=10, **kwargs):
+        return r.request(method, f"{self._sidecar_base()}{path}", headers=self._sidecar_headers(), timeout=timeout, **kwargs)
 
     def _internal_parental_rating_url(self):
         return f"{sidecar_url.rstrip('/')}/internal/parental-rating"
@@ -208,43 +138,29 @@ class Embyservice:
 
     async def emby_create(self, tg: int, name, pwd2, us: int):
         """
-        创建账户
+        创建账户（sidecar 本地账号）
         :param tg: tg_id
         :param name: emby_name
         :param pwd2: pwd2 安全码
         :param us: us 积分
-        :return: bool
+        :return: (pwd, ex) 成功；100 重名或 sidecar 不可用
         """
-        # if _open.tem >= _open.all_user:
-        #     return 403
         ex = (datetime.now() + timedelta(days=us))
-        name_data = ({"Name": name})
-        new_user = r.post(f'{self.url}/emby/Users/New',
-                          headers=self.headers,
-                          json=name_data)
-        if new_user.status_code == 200 or 204:
-            try:
-                id = new_user.json()["Id"]
-                pwd = await pwd_create(8)
-                pwd_data = pwd_policy(id, new=pwd)
-                _pwd = r.post(f'{self.url}/emby/Users/{id}/Password',
-                              headers=self.headers,
-                              json=pwd_data)
-            except:
-                return 100
-            else:
-                policy = create_policy(False, False)
-                _policy = r.post(f'{self.url}/emby/Users/{id}/Policy',
-                                 headers=self.headers,
-                                 json=policy)  # .encode('utf-8')
-                if _policy.status_code == 200 or 204:
-                    sql_update_emby(Emby.tg == tg, embyid=id, name=name, pwd=pwd, pwd2=pwd2, lv='b',
-                                    cr=datetime.now(), ex=ex, us=0)
-
-                    ex = ex.strftime("%Y-%m-%d %H:%M:%S")
-                    return pwd, ex
-        elif new_user.status_code == 400:
-            return 400
+        pwd = await pwd_create(8)
+        try:
+            res = self._sidecar("POST", "/admin/users", json={"Name": name, "Password": pwd})
+        except Exception as e:
+            LOGGER.error(f"创建账户失败：sidecar 不可用 name={name} error={e}")
+            return 100
+        if res.status_code == 409:
+            return 100
+        if res.status_code != 200:
+            LOGGER.error(f"创建账户失败：name={name} HTTP {res.status_code} body={res.text[:200]}")
+            return 100
+        id = res.json()["Id"]
+        sql_update_emby(Emby.tg == tg, embyid=id, name=name, pwd=pwd, pwd2=pwd2, lv='b',
+                        cr=datetime.now(), ex=ex, us=0)
+        return pwd, ex.strftime("%Y-%m-%d %H:%M:%S")
 
     async def emby_del(self, id):
         """
@@ -253,93 +169,57 @@ class Embyservice:
         :return: bool
         """
         managed_user = sql_get_emby(id)
-        res = r.delete(f'{self.url}/emby/Users/{id}', headers=self.headers)
-        if res.status_code == 200 or 204:
-            if not sql_delete_favorites_by_embyid(id):
-                LOGGER.warning(f"删除 Emby 账号 {id} 后清理收藏记录失败，不影响主流程")
-            if managed_user is None:
-                return True
-            if sql_update_emby(Emby.embyid == id, embyid=None, name=None, pwd=None, pwd2=None, lv='d', cr=None,
-                               ex=None):
-                _open.tem = max(_open.tem - 1, 0)
-                save_config()
-                return True
-            else:
-                return False
-        else:
+        try:
+            res = self._sidecar("DELETE", f"/admin/users/{id}")
+        except Exception as e:
+            LOGGER.error(f"删除账户失败：sidecar 不可用 id={id} error={e}")
             return False
+        # 404：sidecar 中已不存在，按删除成功处理以便清理本地记录
+        if res.status_code not in (200, 204, 404):
+            return False
+        if not sql_delete_favorites_by_embyid(id):
+            LOGGER.warning(f"删除账号 {id} 后清理收藏记录失败，不影响主流程")
+        if managed_user is None:
+            return True
+        if sql_update_emby(Emby.embyid == id, embyid=None, name=None, pwd=None, pwd2=None, lv='d', cr=None,
+                           ex=None):
+            _open.tem = max(_open.tem - 1, 0)
+            save_config()
+            return True
+        return False
 
     async def emby_reset(self, id, new=None):
         """
-        重置密码
+        重置密码（sidecar 会同时让该账号所有设备下线）
         :param id: emby_id
-        :param new: new_pwd
+        :param new: new_pwd，None 表示重置为空密码
         :return: bool
         """
-        pwd = pwd_policy(embyid=id, stats=True, new=None)
-        _pwd = r.post(f'{self.url}/emby/Users/{id}/Password',
-                      headers=self.headers,
-                      json=pwd)
-        # print(_pwd.status_code)
-        if _pwd.status_code == 200 or 204:
-            if new is None:
-                if sql_update_emby(Emby.embyid == id, pwd=None) is True:
-                    self.clear_sidecar_auth_tokens(id)
-                    return True
-                return False
-            else:
-                pwd2 = pwd_policy(id, new=new)
-                new_pwd = r.post(f'{self.url}/emby/Users/{id}/Password',
-                                 headers=self.headers,
-                                 json=pwd2)
-                if new_pwd.status_code == 200 or 204:
-                    if sql_update_emby(Emby.embyid == id, pwd=new) is True:
-                        self.clear_sidecar_auth_tokens(id)
-                        return True
-                    return False
-        else:
+        body = {"ResetPassword": True} if new is None else {"NewPw": f"{new}"}
+        try:
+            res = self._sidecar("POST", f"/admin/users/{id}/password", json=body)
+        except Exception as e:
+            LOGGER.error(f"重置密码失败：sidecar 不可用 id={id} error={e}")
             return False
+        if res.status_code != 200:
+            return False
+        return sql_update_emby(Emby.embyid == id, pwd=new) is True
 
     def clear_sidecar_auth_tokens(self, user_id):
         if not sidecar_url:
-            LOGGER.warning(f"重置密码后跳过 Sidecar token 清理：未配置 sidecar_url，user_id={user_id}")
+            LOGGER.warning(f"跳过 Sidecar token 清理：未配置 sidecar_url，user_id={user_id}")
             return False
         try:
-            resp = r.post(
-                self._internal_auth_tokens_clear_url(),
-                headers={"accept": "application/json"},
-                params={"userid": user_id},
-                timeout=5
-            )
+            resp = self._sidecar("POST", "/internal/auth-tokens/clear", timeout=5, params={"userid": user_id})
             if resp.status_code not in (200, 204):
-                LOGGER.error(f"重置密码后清理 Sidecar token 失败：user_id={user_id}, HTTP {resp.status_code}, body={resp.text[:200]}")
+                LOGGER.error(f"清理 Sidecar token 失败：user_id={user_id}, HTTP {resp.status_code}, body={resp.text[:200]}")
                 return False
             payload = resp.json() if resp.content else {}
-            LOGGER.info(f"重置密码后已通知 Sidecar 清理 token：user_id={user_id}, count={payload.get('ClearedTokenCount', 0)}")
+            LOGGER.info(f"已通知 Sidecar 清理 token：user_id={user_id}, count={payload.get('ClearedTokenCount', 0)}")
             return True
         except Exception as e:
-            LOGGER.error(f"重置密码后清理 Sidecar token 异常：user_id={user_id}, error={e}")
+            LOGGER.error(f"清理 Sidecar token 异常：user_id={user_id}, error={e}")
             return False
-
-    async def emby_block(self, id, stats=0, block=emby_block):
-        """
-        显示、隐藏媒体库
-        :param id: emby_id
-        :param stats: plocy
-        :return:bool
-        """
-        if stats == 0:
-            block = list(block or [])
-            policy = create_policy(False, False, block=block)
-        else:
-            policy = create_policy(False, False)
-        _policy = r.post(f'{self.url}/emby/Users/{id}/Policy',
-                         headers=self.headers,
-                         json=policy)
-        # print(policy)
-        if _policy.status_code == 200 or 204:
-            return True
-        return False
 
     @cache.memoize(ttl=10)
     def get_current_playing_count(self) -> int:
@@ -349,7 +229,7 @@ class Embyservice:
         """
         response = r.get(
             self._internal_session_count_url(),
-            headers={"accept": "application/json"},
+            headers=self._sidecar_headers(),
             timeout=3
         )
         response.raise_for_status()
@@ -359,44 +239,38 @@ class Embyservice:
     async def emby_change_policy(self, id=id, admin=False, method=False):
         """
         :param id:
-        :param admin:
-        :param method: 默认False允许播放
+        :param admin: 已无效（sidecar 不提供管理员账号）
+        :param method: True 禁用账号（并让所有设备下线），False 允许播放
         :return:
         """
-        policy = create_policy(admin=admin, disable=method)
-        _policy = r.post(self.url + f'/emby/Users/{id}/Policy',
-                         headers=self.headers,
-                         json=policy)
-        if _policy.status_code == 200 or 204:
-            return True
-        return False
-  
+        try:
+            res = self._sidecar("POST", f"/admin/users/{id}/policy", json={"IsDisabled": bool(method)})
+        except Exception as e:
+            LOGGER.error(f"修改账号状态失败：id={id} error={e}")
+            return False
+        return res.status_code == 200
+
     async def authority_account(self, tg, username, password=None):
-        data = {"Username": username, "Pw": password, }
-        if password == 'None':
-            data = {"Username": username}
-        res = r.post(self.url + '/emby/Users/AuthenticateByName', headers=self.headers, json=data)
+        """只校验账号密码，不产生登录会话。password 为 'None' 表示空密码。"""
+        pw = "" if password in (None, 'None') else password
+        try:
+            res = self._sidecar("POST", "/admin/users/authenticate", json={"Username": username, "Pw": pw})
+        except Exception as e:
+            LOGGER.error(f"校验账号失败：sidecar 不可用 name={username} error={e}")
+            return False, 0
         if res.status_code == 200:
-            embyid = res.json()["User"]["Id"]
-            return True, embyid
+            return True, res.json()["User"]["Id"]
         return False, 0
 
     async def users(self):
         """
-        Asynchronously retrieves the list of users from the Emby server.
-
-        Returns:
-            - If the request is successful, returns a tuple with the first element as True and the second element as a dictionary containing the response JSON.
-            - If the request is unsuccessful, returns a tuple with the first element as False and the second element as a dictionary containing an 'error' key with an error message.
-
-        Raises:
-            - Any exception that occurs during the request.
+        获取全部账号（sidecar），结构与 Emby UserDto 一致（含 Policy）。
+        :return: (True, list) / (False, {'error': ...})
         """
         try:
-            _url = f"{self.url}/emby/Users"
-            resp = r.get(_url, headers=self.headers)
-            if resp.status_code != 204 and resp.status_code != 200:
-                return False, {'error': "🤕Emby 服务器连接失败!"}
+            resp = self._sidecar("GET", "/admin/users", timeout=30)
+            if resp.status_code != 200:
+                return False, {'error': "🤕Sidecar 服务器连接失败!"}
             return True, resp.json()
         except Exception as e:
             return False, {'error': e}
@@ -408,34 +282,28 @@ class Embyservice:
         :return:
         """
         try:
-            _url = f"{self.url}/emby/Users/{embyid}"
-            resp = r.get(_url, headers=self.headers)
-            if resp.status_code != 204 and resp.status_code != 200:
-                return False, {'error': "🤕Emby 服务器连接失败!"}
+            resp = self._sidecar("GET", f"/admin/users/{embyid}")
+            if resp.status_code != 200:
+                return False, {'error': "🤕Sidecar 服务器连接失败!"}
             return True, resp.json()
         except Exception as e:
             return False, {'error': e}
 
     async def add_favotire_items(self, user_id, item_id):
+        """代用户收藏（sidecar 会同时推送收藏通知回本 bot 的 /webhook/favorites）。"""
         try:
-            _url = f"{self.url}/emby/Users/{user_id}/FavoriteItems/{item_id}"
-            resp = r.post(_url, headers=self.headers)
-            if resp.status_code != 204 and resp.status_code != 200:
-                return False
-            return True
+            resp = self._sidecar("POST", f"/admin/users/{user_id}/favorites/{item_id}")
+            return resp.status_code in (200, 204)
         except Exception as e:
             LOGGER.error(f'添加收藏失败 {e}')
             return False
 
     async def item_id_namme(self, user_id, item_id):
         try:
-            req = f"{self.url}/emby/Users/{user_id}/Items/{item_id}"
-            reqs = r.get(req, headers=self.headers, timeout=3)
-            if reqs.status_code != 204 and reqs.status_code != 200:
+            reqs = self._sidecar("GET", f"/admin/users/{user_id}/items/{item_id}", timeout=3)
+            if reqs.status_code != 200:
                 return ''
-            title = reqs.json().get("Name")
-            # print(reqs.json())
-            return title
+            return reqs.json().get("Name")
         except Exception as e:
             LOGGER.error(f'获取title失败 {e}')
             return ''
@@ -461,58 +329,17 @@ class Embyservice:
             return False, {'error': e}
 
     async def items(self, user_id, item_id):
-        try:
-            _url = f"{self.url}/emby/Users/{user_id}/Items/{item_id}"
-            resp = r.get(_url, headers=self.headers)
-            if resp.status_code != 204 and resp.status_code != 200:
-                return False, {'error': "🤕Emby 服务器连接失败!"}
-            return True, resp.json()
-        except Exception as e:
-            return False, {'error': e}
-
-    async def get_emby_report(self, types='Movie', user_id=None, days=7, end_date=None, limit=10):
-        try:
-            if not end_date:
-                end_date = datetime.now(timezone(timedelta(hours=8)))
-            start_time = (end_date - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
-            end_time = end_date.strftime('%Y-%m-%d %H:%M:%S')
-            sql = "SELECT UserId, ItemId, ItemType, "
-            if types == 'Episode':
-                sql += " substr(ItemName,0, instr(ItemName, ' - ')) AS name, "
-            else:
-                sql += "ItemName AS name, "
-            sql += "COUNT(1) AS play_count, "
-            sql += "SUM(PlayDuration - PauseDuration) AS total_duarion "
-            sql += "FROM PlaybackActivity "
-            sql += f"WHERE ItemType = '{types}' "
-            sql += f"AND DateCreated >= '{start_time}' AND DateCreated <= '{end_time}' "
-            sql += "AND UserId not IN (select UserId from UserList) "
-            if user_id:
-                sql += f"AND UserId = '{user_id}' "
-            sql += "GROUP BY name "
-            sql += "ORDER BY play_count DESC "
-            sql += "LIMIT " + str(limit)
-            _url = f'{self.url}/emby/user_usage_stats/submit_custom_query'
-            data = {
-                "CustomQueryString": sql,
-                "ReplaceUserId": False
-            }
-            # print(sql)
-            resp = r.post(_url, headers=self.headers, json=data)
-            if resp.status_code != 204 and resp.status_code != 200:
-                return False, {'error': "🤕Emby 服务器连接失败!"}
-            ret = resp.json()
-            if len(ret["colums"]) == 0:
-                return False, ret["message"]
-            return True, ret["results"]
-        except Exception as e:
-            return False, {'error': e}
+        """按 id 取条目详情（sidecar；user_id 仅为兼容旧调用，已不使用）。"""
+        ok, data = self._sidecar_result("GET", f"/admin/items/{item_id}")
+        if not ok:
+            return False, {'error': data}
+        return True, data
 
     async def get_sidecar_play_count_ranks(self, days=7, limit=10):
         try:
             response = r.get(
                 self._internal_play_count_ranks_url(),
-                headers={"accept": "application/json"},
+                headers=self._sidecar_headers(),
                 params={"days": days, "limit": limit},
                 timeout=10
             )
@@ -535,7 +362,7 @@ class Embyservice:
         try:
             response = r.get(
                 self._internal_user_last_activity_url(),
-                headers={"accept": "application/json"},
+                headers=self._sidecar_headers(),
                 params={"userid": user_id},
                 timeout=5
             )
@@ -549,7 +376,7 @@ class Embyservice:
         try:
             response = r.get(
                 self._internal_item_other_name_url(),
-                headers={"accept": "application/json"},
+                headers=self._sidecar_headers(),
                 params={"item_id": item_id},
                 timeout=5
             )
@@ -566,7 +393,7 @@ class Embyservice:
         try:
             response = r.get(
                 self._internal_item_other_name_url(),
-                headers={"accept": "application/json"},
+                headers=self._sidecar_headers(),
                 params={"item_id": item_id, "other_name": other_name},
                 timeout=5
             )
@@ -579,33 +406,15 @@ class Embyservice:
             LOGGER.error(f"设置别名失败: {e}")
             return False, {'error': e}
 
-    # 找出 指定用户播放过的不同ip，设备
-    async def get_emby_userip(self, user_id):
-        sql = f"SELECT DISTINCT RemoteAddress,DeviceName FROM PlaybackActivity " \
-              f"WHERE RemoteAddress NOT IN ('127.0.0.1', '172.17.0.1') and UserId = '{user_id}'"
-        data = {
-            "CustomQueryString": sql,
-            "ReplaceUserId": True
-        }
-        _url = f'{self.url}/emby/user_usage_stats/submit_custom_query?api_key={emby_api}'
-        resp = r.post(_url, json=data)
-        if resp.status_code != 204 and resp.status_code != 200:
-            return False, {'error': "🤕Emby 服务器连接失败!"}
-        ret = resp.json()
-        if len(ret["colums"]) == 0:
-            return False, ret["message"]
-        return True, ret["results"]
-
     @staticmethod
     def get_medias_count():
         """
         获得电影、电视剧、音乐媒体数量
         :return: MovieCount SeriesCount SongCount
         """
-        req_url = f"{emby_url}/emby/Items/Counts?api_key={emby_api}"
         try:
-            res = r.get(url=req_url)
-            if res:
+            res = r.get(url=f"{Embyservice._sidecar_base()}/admin/items/counts", headers=Embyservice._sidecar_headers(), timeout=5)
+            if res.status_code == 200:
                 result = res.json()
                 # print(result)
                 movie_count = result.get("MovieCount") or 0
@@ -626,19 +435,17 @@ class Embyservice:
 
     async def get_movies(self, title: str, start: int = 0, limit: int = 5):
         """
-        根据标题和年份，检查是否在Emby中存在，存在则返回列表
+        根据标题搜索媒体库中的电影 / 剧集（sidecar），返回列表
         :param limit: x限制条目
         :param title: 标题
         :param start: 从何处开始
         :return: 返回信息列表
         """
-        if start != 0: start = start
-        # Options: Budget, Chapters, DateCreated, Genres, HomePageUrl, IndexOptions, MediaStreams, Overview, ParentId, Path, People, ProviderIds, PrimaryImageAspectRatio, Revenue, SortName, Studios, Taglines
-        req_url = f"{self.url}/emby/Items?IncludeItemTypes=Movie,Series&Fields=ProductionYear,Overview,OriginalTitle,Taglines,ProviderIds,Genres,RunTimeTicks,ProductionLocations,DateCreated,Studios" \
-                  f"&StartIndex={start}&Recursive=true&SearchTerm={title}&Limit={limit}&IncludeSearchTypes=false"
+        # 搜索走 sidecar（Meilisearch 增强搜索 + 完整详情）；封面图片仍由 Emby 原后端提供
         try:
-            res = r.get(url=req_url, headers=self.headers, timeout=3)
-            if res:
+            res = self._sidecar("GET", "/admin/items/search", timeout=5,
+                                params={"q": title, "start": start, "limit": limit})
+            if res.status_code == 200:
                 res_items = res.json().get("Items")
                 if res_items:
                     ret_movies = []
@@ -674,7 +481,7 @@ class Embyservice:
         try:
             resp = r.get(
                 self._internal_parental_rating_url(),
-                headers=self.headers,
+                headers=self._sidecar_headers(),
                 params={"userid": user_id},
                 timeout=5
             )
@@ -690,10 +497,12 @@ class Embyservice:
         try:
             resp = r.get(
                 self._internal_parental_rating_url(),
-                headers=self.headers,
+                headers=self._sidecar_headers(),
                 params={"userid": user_id, "value": value},
                 timeout=5
             )
+            if resp.status_code == 423:
+                return False, "家长控制已在网页控制面板锁定，请先在网页端用登录密码解锁"
             if resp.status_code not in (200, 204):
                 return False, f"HTTP {resp.status_code}"
             data = resp.json()
@@ -706,7 +515,7 @@ class Embyservice:
         try:
             resp = r.get(
                 self._internal_use_line_url(),
-                headers=self.headers,
+                headers=self._sidecar_headers(),
                 params={"userid": user_id},
                 timeout=5
             )
@@ -734,7 +543,7 @@ class Embyservice:
         try:
             resp = r.get(
                 self._internal_use_line_url(),
-                headers=self.headers,
+                headers=self._sidecar_headers(),
                 params={"userid": user_id, "value": requested_value},
                 timeout=5
             )
@@ -799,5 +608,57 @@ class Embyservice:
     #     return None
 
 
+    # ───────── 线路管理（线路与 Pro 标定保存在 sidecar） ─────────
+
+    def get_lines(self):
+        """返回 (True, {"lines": [{id,name,pro,sort}], "defaultLineId": int}) 或 (False, 错误)"""
+        try:
+            resp = self._sidecar("GET", "/admin/lines", timeout=5)
+            if resp.status_code != 200:
+                return False, f"HTTP {resp.status_code}"
+            return True, resp.json()
+        except Exception as e:
+            return False, str(e)
+
+    def upsert_line(self, line_id: int, name: str, pro: bool, sort=None):
+        body = {"Name": name, "Pro": bool(pro)}
+        if sort is not None:
+            body["Sort"] = int(sort)
+        return self._sidecar_result("PUT", f"/admin/lines/{int(line_id)}", json=body)
+
+    def delete_line(self, line_id: int):
+        return self._sidecar_result("DELETE", f"/admin/lines/{int(line_id)}")
+
+    def set_default_line(self, line_id: int):
+        return self._sidecar_result("POST", "/admin/lines/default", json={"Id": int(line_id)})
+
+    def _sidecar_result(self, method, path, **kwargs):
+        try:
+            resp = self._sidecar(method, path, **kwargs)
+            data = resp.json() if resp.content else {}
+            if resp.status_code != 200:
+                return False, data.get("error") or f"HTTP {resp.status_code}"
+            return True, data
+        except Exception as e:
+            return False, str(e)
+
+    # ───────── 额外账号（不绑定 TG，但记录在 emby 表） ─────────
+
+    async def create_extra_account(self, name):
+        """在 sidecar 创建账号并写入 emby 表（tg 取 1~99999 的占位编号，等级 a 不过期）。返回 (True, (tg, pwd, pwd2)) / (False, 原因)"""
+        from bot.sql_helper.sql_extra import sql_add_extra_account
+        pwd = await pwd_create(8)
+        pwd2 = await pwd_create(4)
+        ok, data = self._sidecar_result("POST", "/admin/users", json={"Name": name, "Password": pwd})
+        if not ok:
+            return False, "已有同名账号" if "exists" in str(data) else data
+        tg = sql_add_extra_account(embyid=data["Id"], name=name, pwd=pwd, pwd2=pwd2)
+        if tg is None:
+            # 数据库写入失败时回滚 sidecar 账号，避免产生未绑定账号
+            self._sidecar_result("DELETE", f"/admin/users/{data['Id']}")
+            return False, "写入 embyboss 数据库失败"
+        return True, (tg, pwd, pwd2)
+
+
 # 实例
-emby = Embyservice(emby_url, emby_api)
+emby = Embyservice(emby_public_url)

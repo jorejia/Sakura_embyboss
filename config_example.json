@@ -12,9 +12,10 @@
   "bot_photo": "https://telegra.ph/file/3b6cd2a89b652e72e0d3b.png",
   "admins": [],
   "money": "花币",
-  "emby_api": "xxxxx",
-  "emby_url": "http://255.255.255.255:8096",
-  "sidecar_url": "http://255.255.255.255:8097",
+  "emby_public_url": "https://tv.micu.hk",
+  "sidecar_url": "http://127.0.0.1:18097",
+  "sidecar_admin_token": "",
+  "sidecar_webhook_token": "",
   "default_line_id": 1,
   "expiry_weights": {
     "account": 1.0,
@@ -54,9 +55,6 @@
       "url"
     ]
   },
-  "emby_block": [
-    "nsfw"
-  ],
   "open": {
     "site": true,
     "all_user": 1000,

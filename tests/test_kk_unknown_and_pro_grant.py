@@ -27,7 +27,7 @@ class KkUnknownAndProGrantTests(unittest.TestCase):
         self.assertIn('if line_pro_active(user.line_pro_ex, now=now):', self.sql)
         self.assertIn('user.line_pro_ex = now + timedelta(days=days)', self.sql)
         self.assertIn("filters.regex(r'^line_pro_grant-\\d+$')", self.kk)
-        self.assertIn('target_line = first_pro_line(line_options)', self.kk)
+        self.assertIn('target_line = first_pro_line(current_lines())', self.kk)
         self.assertIn('await emby.set_use_line(emby_id, target_line.id)', self.kk)
 
 

@@ -53,7 +53,7 @@ def build_season_episode_message(item_type: str, is_favorite: bool) -> str:
 
 @router.post("/webhook/favorites")
 async def handle_favorite_webhook(request: Request):
-    """接收 Emby 收藏变更事件，并为追剧推送维护收藏关系。"""
+    """接收 emby-sidecar 推送的收藏变更事件（Emby Webhooks 兼容格式），并为追剧推送维护收藏关系。"""
     try:
         webhook_data = await parse_webhook_payload(request)
         if not webhook_data:

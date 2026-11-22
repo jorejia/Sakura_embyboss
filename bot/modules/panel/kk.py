@@ -5,7 +5,8 @@ kk - 纯装x
 import pyrogram
 from pyrogram import filters
 from pyrogram.errors import BadRequest
-from bot import bot, prefixes, owner, bot_photo, admins, LOGGER, default_line_id, line_options
+from bot import bot, prefixes, owner, bot_photo, admins, LOGGER
+from bot.func_helper.sidecar_lines import current_default_line, current_lines
 from bot.func_helper.emby import emby
 from bot.func_helper.filters import admins_on_filter
 from bot.func_helper.fix_bottons import cr_kk_ikb, gog_rester_ikb
@@ -115,17 +116,17 @@ async def revoke_line_pro(_, call):
 
     revoked, failed_stage, result = await revoke_line_pro_access(
         user.embyid,
-        default_line_id,
+        current_default_line(),
         emby.set_use_line,
         lambda: sql_update_emby(Emby.tg == tgid, line_pro_ex=None),
     )
     if not revoked and failed_stage == 'line':
         LOGGER.error(
             f"【直连Pro手动撤权】管理员 {call.from_user.id} 撤销 {tgid} 失败："
-            f"切回默认线路 {default_line_id} 失败：{result}"
+            f"切回默认线路 {current_default_line()} 失败：{result}"
         )
         return await call.answer(
-            f"切回默认线路 {default_line_id} 失败，Pro权限未清除：{result}",
+            f"切回默认线路 {current_default_line()} 失败，Pro权限未清除：{result}",
             show_alert=True,
         )
     if not revoked:
@@ -138,7 +139,7 @@ async def revoke_line_pro(_, call):
     await call.answer("✅ 已解除直连Pro")
     text = (
         f"管理员 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) "
-        f"已解除你的直连Pro权限，并切回默认线路 {default_line_id}。"
+        f"已解除你的直连Pro权限，并切回默认线路 {current_default_line()}。"
     )
     LOGGER.info(f"【直连Pro手动撤权】{call.from_user.id} 已解除 {tgid} 的直连Pro权限")
     try:
@@ -150,7 +151,7 @@ async def revoke_line_pro(_, call):
         await _refresh_kk_panel(call, tgid)
     except Exception as error:
         LOGGER.warning(f"【直连Pro手动撤权】刷新 /kk 面板失败：{error}")
-        await editMessage(call, f"✅ 已解除用户 `{tgid}` 的直连Pro权限，并切回默认线路 {default_line_id}")
+        await editMessage(call, f"✅ 已解除用户 `{tgid}` 的直连Pro权限，并切回默认线路 {current_default_line()}")
 
 
 @bot.on_callback_query(filters.regex(r'^line_pro_grant-\d+$'))
@@ -163,7 +164,7 @@ async def grant_line_pro(_, call):
             or (tgid in admins and tgid != call.from_user.id)):
         return await call.answer("机器人不可以修改其他 Bot 管理员的直连Pro", show_alert=True)
 
-    target_line = first_pro_line(line_options)
+    target_line = first_pro_line(current_lines())
     if target_line is None:
         return await call.answer("配置中没有 Pro 线路，无法赋予权限", show_alert=True)
 

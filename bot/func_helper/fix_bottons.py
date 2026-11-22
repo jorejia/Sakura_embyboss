@@ -1,7 +1,8 @@
 from pykeyboard import InlineKeyboard, InlineButton
 from pyrogram.types import InlineKeyboardMarkup
 from pyromod.helpers import ikb, array_chunk
-from bot import main_group, bot_name, _open, user_buy, sakura_b, schedall, line_options
+from bot import main_group, bot_name, _open, user_buy, sakura_b, schedall
+from bot.func_helper.sidecar_lines import current_default_line, current_lines
 from bot.func_helper.emby import emby
 from bot.func_helper.line_access import configured_line, visible_lines
 from bot.func_helper.utils import judge_admins, members_info, convert_to_beijing_time
@@ -109,7 +110,7 @@ def line_menu_ikb(current_value: int, has_pro: bool = False, trial_available: bo
         return f'{prefix}{text}'
 
     buttons = [[label(option.id, f'💎 {option.name}' if option.pro else option.name), f'line_set:{option.id}']
-               for option in visible_lines(line_options, has_pro)]
+               for option in visible_lines(current_lines(), has_pro)]
     rows = array_chunk(buttons, 2)
     if trial_available:
         rows.append([('🎁 免费试用 Pro 线路 1 天', 'line_pro_trial')])
@@ -118,7 +119,7 @@ def line_menu_ikb(current_value: int, has_pro: bool = False, trial_available: bo
 
 
 def line_label(value: int) -> str:
-    option = configured_line(line_options, value)
+    option = configured_line(current_lines(), value)
     return option.name if option else f'未知({value})'
 
 
@@ -140,13 +141,6 @@ def del_me_ikb(embyid) -> InlineKeyboardMarkup:
     return ikb([[('🎯 确定', f'delemby-{embyid}')], [('🔙 取消', 'members')]])
 
 
-def emby_block_ikb(embyid) -> InlineKeyboardMarkup:
-    return ikb(
-        [[("✔️️ - 显示", f"emby_unblock-{embyid}"), ("✖️ - 隐藏", f"emby_block-{embyid}")], [("🔙 返回", "members")]])
-
-
-user_emby_block_ikb = ikb([[('✅ 已隐藏', 'members')]])
-user_emby_unblock_ikb = ikb([[('❎ 已显示', 'members')]])
 
 
 def checkin_menu_ikb(options=None) -> InlineKeyboardMarkup:
@@ -161,6 +155,7 @@ def checkin_menu_ikb(options=None) -> InlineKeyboardMarkup:
 
 gm_ikb_content = ikb([[('⭕ 注册上限', 'all_user_limit'), ('🎁 生成活动码', 'cr_activity'), ('🎟️ 生成注册', 'cr_link')],
                       [('💎 生成线路码', 'cr_line'), ('💊 查询注册', 'ch_link'), ('🏷️ 别名设置', 'alias_setting')],
+                      [('🛣️ 线路管理', 'lnadm'), ('🧾 额外账号', 'xacct'), ('🧰 维护', 'mtask')],
                       [('🏬 兑换设置', 'set_renew'), ('🌏 定时', 'schedall'), ('其他 🪟', 'back_config')],
                       [('🕹️ 主界面', 'back_start')]])
 
