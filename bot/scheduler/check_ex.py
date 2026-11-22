@@ -9,7 +9,7 @@ from asyncio import sleep
 from bot import bot, expiry_weights, group, LOGGER, _open, schedall
 from bot.func_helper.sidecar_lines import current_default_line, current_lines
 from bot.func_helper.emby import emby
-from bot.func_helper.line_access import revoke_line_pro_access
+from bot.func_helper.line_access import line_pro_active, revoke_line_pro_access
 from bot.sql_helper.sql_emby import (
     Emby,
     get_all_emby,
@@ -76,7 +76,13 @@ async def check_expired():
     dead_day = datetime.now() + timedelta(days=5)
     ext = (datetime.now() + timedelta(days=30))
     for r in rst:
-        if _open.exchange and r.iv >= _open.exchange_cost * 30:
+        points_renew = _open.exchange and r.iv >= _open.exchange_cost * 30
+        # 自动续期（米币 / Pro 权重转换）前确保 sidecar 中账号可用：上次到期禁用后 lv 可能没写成 c，
+        # 这里 lv=b 但 sidecar 仍是禁用。确认不了就跳过本轮（不扣米币、不改到期时间），下次任务重试。
+        if (points_renew or line_pro_active(r.line_pro_ex)) and not await emby.ensure_enabled(r.embyid):
+            LOGGER.error(f'【到期检测】#id{r.tg} [{r.name}] 自动续期前解封未成功，本轮跳过，下次任务重试')
+            continue
+        if points_renew:
             b = r.iv - _open.exchange_cost * 30
             if sql_update_emby(Emby.tg == r.tg, ex=ext, iv=b):
                 text = f'【到期检测】\n#id{r.tg} 续期账户 [{r.name}](tg://user?id={r.tg})\n' \

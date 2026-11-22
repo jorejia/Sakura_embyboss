@@ -785,10 +785,30 @@ async def do_store_renew(_, call):
                 if days < 1:
                     sql_update_emby(Emby.tg == call.from_user.id, iv=e.iv - 2)
                     return await editMessage(call, f'🫡，没带这么小气的，哼！至少兑换1天，罚2米币。')
-                new_ex = e.ex + timedelta(days)
-                sql_update_emby(Emby.tg == call.from_user.id, ex=new_ex, iv=new_us)
-                await asyncio.gather(emby.emby_change_policy(id=e.embyid),
-                                     editMessage(call, f'🎉 您已花费 {iv}{sakura_b}\n🌏 到期时间 **{new_ex}**'))
+                if e.lv == 'c':
+                    # 已到期封存的账号：先让 sidecar 解封，确认成功才扣米币、写数据库
+                    new_ex = datetime.now() + timedelta(days)
+                    if not await emby.emby_change_policy(id=e.embyid, method=False):
+                        LOGGER.error(f'【兑换续期】- {call.from_user.id} sidecar 解封未成功，未扣除{sakura_b}')
+                        return await editMessage(call, f'❌ 续期失败：账号解封未成功，{sakura_b}未扣除，请稍后重试。',
+                                                 buttons=back_members_ikb)
+                    if sql_update_emby(Emby.tg == call.from_user.id, ex=new_ex, iv=new_us, lv='b') is not True:
+                        restored = await emby.emby_change_policy(id=e.embyid, method=True)
+                        LOGGER.error(f'【兑换续期】- {call.from_user.id} 数据库写入失败，sidecar 状态'
+                                     f'{"已恢复禁用" if restored else "恢复失败，需人工核对"}')
+                        return await editMessage(call, f'❌ 续期失败：数据库写入失败，{sakura_b}未扣除，请稍后重试。',
+                                                 buttons=back_members_ikb)
+                else:
+                    new_ex = e.ex + timedelta(days)
+                    # lv 是 b/a 但 sidecar 可能仍是禁用：确认可用后才扣米币
+                    if not await emby.ensure_enabled(e.embyid):
+                        LOGGER.error(f'【兑换续期】- {call.from_user.id} sidecar 解封未成功，未扣除{sakura_b}')
+                        return await editMessage(call, f'❌ 续期失败：账号解封未成功，{sakura_b}未扣除，请稍后重试。',
+                                                 buttons=back_members_ikb)
+                    if sql_update_emby(Emby.tg == call.from_user.id, ex=new_ex, iv=new_us) is not True:
+                        return await editMessage(call, f'❌ 续期失败：数据库写入失败，{sakura_b}未扣除，请稍后重试。',
+                                                 buttons=back_members_ikb)
+                await editMessage(call, f'🎉 您已花费 {iv}{sakura_b}\n🌏 到期时间 **{new_ex}**')
                 LOGGER.info(f'【兑换续期】- {call.from_user.id} 已花费 {iv}{sakura_b}，到期时间：{new_ex}')
     else:
         await callAnswer(call, '❌ 管理员未开启此兑换', True)

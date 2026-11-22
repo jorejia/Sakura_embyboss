@@ -2,7 +2,6 @@
 兑换注册码exchange
 """
 import requests
-import time
 from datetime import timedelta, datetime
 
 from bot import bot, _open, LOGGER, bot_photo, user_buy
@@ -14,6 +13,41 @@ from bot.func_helper.msg_utils import sendMessage, sendPhoto
 from bot.sql_helper.sql_code import Code
 from bot.sql_helper.sql_emby import sql_get_emby, Emby
 from bot.sql_helper import Session
+
+
+async def _renew_unban(session, tg, embyid, ex_new):
+    """
+    到期账号（lv=c）续费：先让 sidecar 解封，确认成功后才写数据库。
+    数据库写失败时把 sidecar 重新禁用，保持两边一致（否则到期检测会按 lv=c 删号）。
+    :return: (成功与否, 失败原因)
+    """
+    if not await emby.emby_change_policy(id=embyid, method=False):
+        return False, 'sidecar 解封未成功'
+    try:
+        updated = session.query(Emby).filter(Emby.tg == tg, Emby.lv == 'c').update({Emby.ex: ex_new, Emby.lv: 'b'})
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        LOGGER.error(f"【续费解封】{tg} 数据库写入异常：{e}")
+        updated = 0
+    if updated:
+        return True, ''
+    if not await emby.emby_change_policy(id=embyid, method=True):
+        LOGGER.error(f"【续费解封】{tg} 数据库写入失败且 sidecar 重新禁用失败，embyid={embyid} 需人工核对")
+    return False, '数据库写入失败'
+
+
+def _refund_code(session, register_code, tg):
+    """把本次占用的卡密恢复为未使用"""
+    try:
+        n = session.query(Code).filter(Code.code == register_code, Code.used == tg).update(
+            {Code.used: None, Code.usedtime: None})
+        session.commit()
+        return n > 0
+    except Exception as e:
+        session.rollback()
+        LOGGER.error(f"【退回卡密】{register_code} 退回失败：{e}")
+        return False
 
 
 def _line_code_account_error(user):
@@ -137,29 +171,50 @@ async def rgs_code(_, msg, register_code):
             # 此处需要写一个判断 now和ex的大小比较。进行日期加减。
             ex_new = datetime.now()
             if lv == 'c':
-                ex_new = ex_new + timedelta(days=us1)               
-                session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new, Emby.lv: 'b'})
-                session.commit()
-                time.sleep(1)
-                datac = sql_get_emby(tg=msg.from_user.id)
-                lvc = datac.lv
-                if lvc == 'c':
-                    await sendMessage(msg,
-                                    f'续费失败，请看用户手册第18条申诉')
-                else:
-                    await emby.emby_change_policy(id=embyid, method=False)
-                    await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
-                                        f'请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')                   
+                ex_new = ex_new + timedelta(days=us1)
+                ok, reason = await _renew_unban(session, msg.from_user.id, embyid, ex_new)
+                if not ok:
+                    refunded = _refund_code(session, register_code, msg.from_user.id)
+                    LOGGER.error(f"【续费解封失败】{msg.from_user.id} 使用 {register_code}：{reason}，"
+                                 f"注册码{'已退回' if refunded else '退回失败'}")
+                    return await sendMessage(
+                        msg,
+                        f'❌ 续费失败：账号解封未成功（{reason}）\n'
+                        + ('注册码已退回，可稍后重新使用。' if refunded else '注册码退回失败，请联系管理员处理。'),
+                        timer=120)
+                await sendMessage(msg, f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n'
+                                       f'请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')
             elif lv == 'b' or lv == 'a':
                 base_ex = data.ex if data.ex and data.ex > datetime.now() else datetime.now()
                 ex_new = base_ex + timedelta(days=us1)
-                session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
-                session.commit()
+                # lv 是 b/a 但 sidecar 可能仍是禁用（到期禁用后 lv 没写成 c）：续费前确保可用，确认不了就退卡密
+                reason = None
+                if not await emby.ensure_enabled(embyid):
+                    reason = 'sidecar 解封未成功'
+                else:
+                    try:
+                        session.query(Emby).filter(Emby.tg == msg.from_user.id).update({Emby.ex: ex_new})
+                        session.commit()
+                    except Exception as e:
+                        session.rollback()
+                        LOGGER.error(f"【续费】{msg.from_user.id} 数据库写入异常：{e}")
+                        reason = '数据库写入失败'
+                if reason:
+                    refunded = _refund_code(session, register_code, msg.from_user.id)
+                    LOGGER.error(f"【续费失败】{msg.from_user.id} 使用 {register_code}：{reason}，"
+                                 f"注册码{'已退回' if refunded else '退回失败'}")
+                    return await sendMessage(
+                        msg,
+                        f'❌ 续费失败（{reason}）\n'
+                        + ('注册码已退回，可稍后重新使用。' if refunded else '注册码退回失败，请联系管理员处理。'),
+                        timer=120)
                 await sendMessage(msg,
                                   f'🎊 少年郎，恭喜你，已续费 {us1} 天🎁\n请点击 /myinfo 确认续费时长已到账，如有疑问，可以看用户手册第18条申诉')
             else:
-                await sendMessage(msg,
-                                  f'⚠️ 当前账户状态 `{lv}` 暂不支持使用注册码续期，请联系管理员检查。')
+                refunded = _refund_code(session, register_code, msg.from_user.id)
+                return await sendMessage(msg,
+                                         f'⚠️ 当前账户状态 `{lv}` 暂不支持使用注册码续期，请联系管理员检查。'
+                                         + ('注册码已退回。' if refunded else ''))
             session.commit()
             new_code = register_code[:-7] + "░" * 7
             LOGGER.info(f"【续费】：{msg.from_user.first_name}[{msg.chat.id}] 使用了 {register_code}，到期时间：{ex_new}")

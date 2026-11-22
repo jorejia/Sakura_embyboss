@@ -241,14 +241,42 @@ class Embyservice:
         :param id:
         :param admin: 已无效（sidecar 不提供管理员账号）
         :param method: True 禁用账号（并让所有设备下线），False 允许播放
-        :return:
+        :return: 只有 sidecar 返回 200 且回传的 Policy.IsDisabled 与目标一致才算成功
         """
+        want = bool(method)
         try:
-            res = self._sidecar("POST", f"/admin/users/{id}/policy", json={"IsDisabled": bool(method)})
+            res = self._sidecar("POST", f"/admin/users/{id}/policy", json={"IsDisabled": want})
         except Exception as e:
             LOGGER.error(f"修改账号状态失败：id={id} error={e}")
             return False
-        return res.status_code == 200
+        if res.status_code != 200:
+            LOGGER.error(f"修改账号状态失败：id={id} HTTP {res.status_code} body={res.text[:200]}")
+            return False
+        try:
+            got = res.json()["Policy"]["IsDisabled"]
+        except Exception as e:
+            LOGGER.error(f"修改账号状态失败：id={id} 响应无法解析 error={e} body={res.text[:200]}")
+            return False
+        if bool(got) != want:
+            LOGGER.error(f"修改账号状态失败：id={id} 目标 IsDisabled={want}，sidecar 返回 {got}")
+            return False
+        return True
+
+    async def ensure_enabled(self, id):
+        """
+        续费前确保 sidecar 中账号处于可用状态：已可用直接返回 True；被禁用则解封并确认。
+        用于 lv=b 但 sidecar 仍是禁用（之前到期禁用后数据库没写成 c）等不一致情况。
+        :return: 只有确认 sidecar 中账号可用才返回 True
+        """
+        ok, data = self.user(id)
+        if ok:
+            try:
+                if not data["Policy"]["IsDisabled"]:
+                    return True
+            except Exception as e:
+                LOGGER.error(f"查询账号状态失败：id={id} 响应无法解析 error={e}")
+        LOGGER.info(f"续费解封：id={id} 当前{'被禁用' if ok else '状态未知'}，执行解封")
+        return await self.emby_change_policy(id=id, method=False)
 
     async def authority_account(self, tg, username, password=None):
         """只校验账号密码，不产生登录会话。password 为 'None' 表示空密码。"""
