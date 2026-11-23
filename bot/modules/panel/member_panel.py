@@ -89,7 +89,7 @@ async def create_user(_, call, us):
                                   f'· 登陆密码 | `{pwd1[0]}`\n'
                                   f'· 安全码 | {emby_pwd2}（仅用于重置密码）\n'
                                   f'· 到期时间 | {pwd1[1]}\n'
-                                  f'· 服务器地址 | 见下方用户手册，请认真看使用限制，否则连不上\n\n'
+                                  f'· 服务器连接地址和客户端见下方用户手册，本服指定客户端使用，不要自己找！\n\n'
                                   f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 手册口令 a1234**')
                 LOGGER.info(f"【创建账户】：{call.from_user.id} - 建立了 {emby_name} ")
                 await tem_alluser()
@@ -299,7 +299,7 @@ async def bind_tg(_, call):
                    f'· 登陆密码 | `{pwd[0]}`\n' \
                    f'· 安全码 | {pwd[1]}（仅用于重置密码）\n' \
                    f'· 到期时间 | {ex}\n' \
-                   f'· 服务器地址 | 见下方用户手册，请认真看使用限制，否则连不上\n\n' \
+                   f'· 服务器连接地址和客户端见下方用户手册，本服指定客户端使用，不要自己找！\n\n' \
                    f'**·[【必看用户手册】](https://micu.hk/archives/emby-users) - 手册口令 a1234**'
             sql_update_emby(Emby.tg == call.from_user.id, embyid=embyid, name=emby_name, pwd=emby_pwd,
                             pwd2=emby_pwd, lv='b', cr=datetime.now(), ex=ex)
